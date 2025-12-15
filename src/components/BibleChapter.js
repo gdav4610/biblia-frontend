@@ -3,7 +3,13 @@ import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import Fade from "@mui/material/Fade";
-import Link from "@mui/material/Link";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+import StrongDetail from "./StrongDetail";
 
 export default function BibleChapter({ book, chapter }) {
   const [data, setData] = useState(null);
@@ -11,6 +17,9 @@ export default function BibleChapter({ book, chapter }) {
   const [error, setError] = useState(null);
   // Estado para controlar qué strongNumber está siendo hoverizado
   const [hoveredStrong, setHoveredStrong] = useState(null);
+  // Estado para el modal de detalle Strong
+  const [openStrongModal, setOpenStrongModal] = useState(false);
+  const [selectedStrongInfo, setSelectedStrongInfo] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -34,6 +43,16 @@ export default function BibleChapter({ book, chapter }) {
         setLoading(false);
       });
   }, [book, chapter]);
+
+  const openStrong = (wordInfo) => {
+    setSelectedStrongInfo(wordInfo);
+    setOpenStrongModal(true);
+  };
+
+  const closeStrong = () => {
+    setOpenStrongModal(false);
+    setSelectedStrongInfo(null);
+  };
 
   if (error)
     return <p style={{ color: "red" }}>❌ Error al cargar: {error}</p>;
@@ -88,8 +107,6 @@ export default function BibleChapter({ book, chapter }) {
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
           const candidateClean = trimSpaces(candidate); // solo trim de espacios
-        // alert(words + "("+ i + ","+ (i+kwLen)*1+"): " + words.slice(i, i + kwLen));
-        // alert(kw  +" === " + candidateClean);
           return candidateClean === kw; // comparación exacta normalizada
         });
 
@@ -104,18 +121,16 @@ export default function BibleChapter({ book, chapter }) {
               key={`kw-${i}`}
               title={
                 <div style={{ fontSize: "1.02rem" }}>
-                  <span style={{ fontSize: "1.6em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  (de <span style={{ fontSize: "1.6em", marginTop: "0px"}}>{wordInfo.sourceInflection}</span>) <br />
+                  <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  (de <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.sourceInflection}</span> ) <br />
                   {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {wordInfo.sourceTransliteration ? <em>{wordInfo.sourceTransliteration}</em> : null}) <br />
                   {wordInfo.sourceMeaning} <br />
-                  <Link
-                    href={`/strongs/${wordInfo.strongNumber}`}
-                    target="_blank"
-                    underline="hover"
-                    color="inherit"
-                    style={{ fontSize: "1em", marginTop: "5px", display: "inline-block" }}
+                  <Button
+                    onClick={() => openStrong(wordInfo)}
+                    size="small"
+                    style={{ color: '#a7e6a9', textTransform: 'none', padding: 0, minWidth: 0 }}
                   >
                     Ver detalle (Strong {wordInfo.strongNumber})
-                  </Link>
+                  </Button>
                 </div>
               }
               arrow
@@ -166,6 +181,31 @@ export default function BibleChapter({ book, chapter }) {
           {data.book} {data.chapter}
         </h2>
         {verses.map(renderVerse)}
+
+        {/* Dialog para mostrar StrongDetail en modal */}
+        <Dialog
+          open={openStrongModal}
+          onClose={closeStrong}
+          fullWidth
+          maxWidth="md"
+          aria-labelledby="strong-dialog-title"
+        >
+          <DialogTitle id="strong-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {selectedStrongInfo ? `Strong ${selectedStrongInfo.strongNumber}` : 'Detalle Strong'}
+            <IconButton onClick={closeStrong} size="small" aria-label="Cerrar">
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            {selectedStrongInfo ? (
+              <StrongDetail
+                strongNumber={selectedStrongInfo.strongNumber}
+                initialData={selectedStrongInfo}
+                onClose={closeStrong}
+              />
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </Box>
     </Fade>
   );
