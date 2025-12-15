@@ -1,0 +1,41 @@
+/* Fondo y texto general */
+body, #root, .app-container {
+  background-color: #121212;
+  color: #e0e0e0;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Encabezados */
+h2 {
+  color: #ffffff;
+}
+
+/* Versículos */
+p {
+  line-height: 1.6;
+}
+
+/* Palabras clicables */
+.word-clickable {
+  cursor: pointer;
+  color: #81d4fa; /* azul claro */
+  text-decoration: underline dotted;
+  transition: color 0.2s;
+}
+.word-clickable:hover {
+  color: #4fc3f7; /* azul más brillante */
+}
+
+/* Animación fade-in para tooltip */
+.fade-tooltip {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.fade-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}

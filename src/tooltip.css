@@ -1,0 +1,18 @@
+/* tooltip.css */
+
+/* Animación de fade-in y fade-out */
+.fade-tooltip {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.fade-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Ajuste global del tamaño de fuente para tooltips de MUI */
+.MuiTooltip-tooltip {
+  font-size: 1.02rem;
+}
