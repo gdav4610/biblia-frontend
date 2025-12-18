@@ -84,6 +84,9 @@ export default function BibleChapter({ book, chapter }) {
             sourceInflection: k.sourceInflection,
             sourceMeaning: k.sourceMeaning,
             color: k.color,
+            compoundTransliteration: k.compoundTransliteration,
+            compoundInflection: k.compoundInflection,
+            compoundMeaning: k.compoundMeaning,
           };
 
           return [key, normalized];
@@ -107,7 +110,7 @@ export default function BibleChapter({ book, chapter }) {
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
           const candidateClean = trimSpaces(candidate); // solo trim de espacios
-          return candidateClean === kw; // comparación exacta normalizada
+          return candidateClean === kw; // comparación exacta
         });
 
 
@@ -116,18 +119,24 @@ export default function BibleChapter({ book, chapter }) {
           const wordInfo = keywordMap[matchKeyword];
           const keywordsLength = matchKeyword.split(" ").length;
 
+          // Fallbacks para mostrar en el tooltip: si no viene sourceInflection usar compoundInflection,
+          // si no viene sourceTransliteration usar compoundTransliteration
+          const inflectionDisplay = wordInfo.sourceInflection || wordInfo.compoundInflection || '';
+          const sourceTransliterationDisplay = wordInfo.sourceTransliteration || wordInfo.compoundTransliteration || '';
+
           tokens.push(
             <Tooltip
               key={`kw-${i}`}
               title={
                 <div style={{ fontSize: "1.02rem" }}>
-                  <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  (de <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.sourceInflection}</span> ) <br />
-                  {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {wordInfo.sourceTransliteration ? <em>{wordInfo.sourceTransliteration}</em> : null}) <br />
-                  {wordInfo.sourceMeaning} <br />
+                  <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  ( de <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
+                  {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {sourceTransliterationDisplay ? <em>{sourceTransliterationDisplay}</em> : null}) <br />
+                  { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
+                  {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
                   <Button
                     onClick={() => openStrong(wordInfo)}
                     size="small"
-                    style={{ color: '#a7e6a9', textTransform: 'none', padding: 0, minWidth: 0 }}
+                    style={{ color: '#e0f2ff', textTransform: 'none', padding: 0, minWidth: 0 }}
                   >
                     Ver detalle (Strong {wordInfo.strongNumber})
                   </Button>
@@ -141,7 +150,7 @@ export default function BibleChapter({ book, chapter }) {
                 onMouseEnter={() => setHoveredStrong(wordInfo.strongNumber)}
                 onMouseLeave={() => setHoveredStrong(null)}
                 style={{
-                  color: "#36a33b",
+                  color: wordInfo.compoundMeaning ? '#60ba20' : "#3386d4",
                   cursor: "help",
                   fontWeight: hoveredStrong === wordInfo.strongNumber ? 700 : 500,
                   textDecoration: hoveredStrong === wordInfo.strongNumber ? "underline" : "none",
@@ -199,6 +208,7 @@ export default function BibleChapter({ book, chapter }) {
           <DialogContent dividers>
             {selectedStrongInfo ? (
               <StrongDetail
+                strongCode={selectedStrongInfo.strongNumber}
                 strongNumber={selectedStrongInfo.strongNumber}
                 initialData={selectedStrongInfo}
                 onClose={closeStrong}

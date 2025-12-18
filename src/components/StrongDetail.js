@@ -4,8 +4,9 @@ import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
+import Pagination from '@mui/material/Pagination';
 
-export default function StrongDetail({ strongNumber: propStrongNumber = null, initialData = null, onClose = null }) {
+export default function StrongDetail({ strongCode = null, strongNumber: propStrongNumber = null, initialData = null, onClose = null }) {
   // 📜 Lista de libros con IDs numéricos
   const bookMapping = [
     { id: 1, name: "Génesis" },
@@ -79,11 +80,12 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
   // Si no se proporciona como prop, intentar leer de la ruta
   const routeParams = useParams();
   const routeStrong = routeParams.strongCode || routeParams.strongNumber || routeParams.id || null;
-  // Asegurarse de derivar el código Strong también desde initialData si se pasó
-  const strongCode = propStrongNumber || (initialData && initialData.strongNumber) || routeStrong;
+  // Valor inicial del strong: priorizar prop strongCode, luego strongNumber prop, luego initialData, luego ruta
+  const initialStrong = strongCode || propStrongNumber || (initialData && initialData.strongNumber) || routeStrong;
+  const [currentStrongCode, setCurrentStrongCode] = React.useState(initialStrong);
 
   const [data, setData] = React.useState(initialData || null);
-  // Si se pasó initialData, empezar con loading=false para mostrarla mientras refrescamos en background.
+  // Si se pasó initialData y corresponde al strong inicial, empezar con loading=false para mostrarla mientras refrescamos en background.
   const [loading, setLoading] = React.useState(initialData ? false : true);
   const [error, setError] = React.useState(false);
 
@@ -92,9 +94,12 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
   const [detailsLoading, setDetailsLoading] = React.useState(false);
   const [detailsError, setDetailsError] = React.useState(false);
   const [detailVerses, setDetailVerses] = React.useState(null);
+  // Paginación
+  const [page, setPage] = React.useState(1);
+  const pageSize = 10;
 
   React.useEffect(() => {
-    if (!strongCode) {
+    if (!currentStrongCode) {
       setError(true);
       setLoading(false);
       return;
@@ -102,8 +107,8 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
 
     setError(false);
 
-    // Obtener estadísticas del strong. Usar ruta relativa para evitar problemas de CORS en desarrollo.
-    fetch(`/api/strongs/${encodeURIComponent(strongCode)}/stats`)
+    // Obtener estadísticas del strong activo (currentStrongCode). Usar ruta relativa para evitar problemas de CORS en desarrollo.
+    fetch(`/api/strongs/${encodeURIComponent(currentStrongCode)}/stats`)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -117,16 +122,32 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [strongCode]);
+  }, [currentStrongCode]);
+
+  // Resetear la página cada vez que cambian los detailVerses
+  React.useEffect(() => {
+    setPage(1);
+  }, [detailVerses]);
+
+  const totalPages = detailVerses ? Math.max(1, Math.ceil(detailVerses.length / pageSize)) : 0;
+  const pagedVerses = detailVerses ? detailVerses.slice((page - 1) * pageSize, page * pageSize) : [];
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+  };
 
   const onCountClick = (translatedWord) => {
-    if (!strongCode) return;
+    if (!currentStrongCode) return;
     setDetailsLoading(true);
     setDetailsError(false);
     setDetailVerses(null);
 
-    // Usar ruta relativa para respetar proxy/deployment
-    const url = `/api/strongs/${encodeURIComponent(strongCode)}/details?translatedWord=${encodeURIComponent(translatedWord)}`;
+    // Construir URL: no enviar translatedWord si es null o la cadena "null"
+    let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
+    if (translatedWord !== null && translatedWord !== undefined && translatedWord !== 'null') {
+      const sep = url.includes('?') ? '&' : '?';
+      url = `${url}${sep}translatedWord=${encodeURIComponent(translatedWord)}`;
+    }
 
     fetch(url)
       .then((res) => {
@@ -152,21 +173,59 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
     setDetailsError(false);
   };
 
-  const renderHighlightedText = (text, match) => {
+  // Cambiar el strongCode activo y recargar el modal con ese newStrong
+  const changeStrong = (newStrong) => {
+    if (!newStrong) return;
+    // reset estados relevantes
+    setData(null);
+    setLoading(true);
+    setError(false);
+    setView("stats");
+    setDetailVerses(null);
+    setDetailsError(false);
+    setDetailsLoading(false);
+    setPage(1);
+    setCurrentStrongCode(newStrong);
+  };
+
+  const renderHighlightedText = (text, match, appearanceIndex) => {
     if (!text) return text;
     if (!match) return text;
-    const escaped = match.replace(/[.*+?^${}()|[\\]\]/g, '\\$&');
+    const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+    const escaped = escapeRegExp(match);
     const regex = new RegExp(escaped, 'gi');
-    const result = [];
-    let lastIndex=0;
-    let matchIndex=0;
-    text.replace(regex, (m, offset)=>{
-      result.push(text.slice(lastIndex, offset));
-      result.push(<span key={'hl-'+matchIndex++} style={{color:'red'}}>{m}</span>);
-      lastIndex = offset + m.length;
-    });
-    result.push(text.slice(lastIndex));
-    return result;
+
+    const parts = [];
+    let lastIndex = 0;
+    let m;
+    let count = 0;
+
+    while ((m = regex.exec(text)) !== null) {
+      const matched = m[0];
+      const idx = m.index;
+      // push text before match
+      if (idx > lastIndex) parts.push(text.slice(lastIndex, idx));
+
+      count += 1;
+      const target = appearanceIndex && Number(appearanceIndex) > 0 ? Number(appearanceIndex) : null;
+      const shouldHighlight = target ? (count === target) : true;
+
+      if (shouldHighlight) {
+        parts.push(<span key={`hl-${count}`} style={{ color: 'red' }}>{matched}</span>);
+      } else {
+        parts.push(matched);
+      }
+
+      lastIndex = idx + matched.length;
+
+      // avoid infinite loop on zero-length matches
+      if (matched.length === 0) regex.lastIndex++;
+    }
+
+    // push remaining text
+    if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+
+    return parts;
   }
 
   if (loading) {
@@ -196,7 +255,7 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
     <Box p={3}>
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <Typography variant="h4" gutterBottom data-testid="strong-title">
-          {data.transliteration || data.transliteration === 0 ? data.transliteration : ""} (Strong {strongCode})
+          {data && (data.transliteration || data.transliteration === 0) ? data.transliteration : ""} - {data.meaning}
         </Typography>
         {onClose ? (
           <Button onClick={onClose} size="small" variant="outlined">Cerrar</Button>
@@ -204,17 +263,36 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
       </Box>
 
       <Typography variant="body2" gutterBottom>
-        <strong>Significado:</strong> {data.meaning}
+        <strong>Strong:</strong> {currentStrongCode}
       </Typography>
       <Typography variant="body2" gutterBottom>
-        <strong>Inflexion:</strong> {data.inflection}
+        <strong>Hebreo:</strong> <span style={{ fontSize: '1.6em' }}>{data.inflection}</span>
       </Typography>
       <Typography variant="body2" gutterBottom>
-        <strong>Origen:</strong> {data.idParent}
+        <strong>Origen:</strong>{' '}
+        {data && typeof data.idParent === 'string' && data.idParent === "" ? (
+          (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
+            <span>Verbo (sin raíz)</span>
+          ) : (
+            <span>{data.parentMeaning}</span>
+          )
+        ) : data && data.idParent ? (
+          <Button size="small" onClick={() => changeStrong(data.idParent)}>
+            {data.idParent} - {data.parentMeaning}
+          </Button>
+        ) : (
+          data && data.idParent
+        )}
+        {/* Si existe idParentSec y no es cadena vacía, mostrar un segundo botón con la misma funcionalidad */}
+        {data && typeof data.idParentSec === 'string' && data.idParentSec !== "" ? (
+          <Button size="small" onClick={() => changeStrong(data.idParentSec)} style={{ marginLeft: 10 }}>
+            {data.idParentSec} - {data.parentSecMeaning}
+          </Button>
+        ) : null}
       </Typography>
 
       <Typography variant="body1" gutterBottom style={{ marginTop: 10 }}>
-        <strong>Ocurrencias en la Biblia:</strong>
+        <strong>Apariciones en la Biblia:</strong>
       </Typography>
 
       {/* Vista: estadísticas (lista original) */}
@@ -222,7 +300,7 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
         <ul>
           {(data.keywordStats || []).map((ex, idx) => (
             <li key={idx} style={{ marginBottom: 6 }}>
-              <span style={{ marginRight: 8 }}>{ex.translatedWord}</span>
+              <span style={{ marginRight: 8 }}>{ex.translatedWord === "" ? "(Sin traducción)" : ex.translatedWord}</span>
               <button
                 onClick={() => onCountClick(ex.translatedWord)}
                 style={{
@@ -257,17 +335,23 @@ export default function StrongDetail({ strongNumber: propStrongNumber = null, in
           )}
 
           <ul>
-            {(detailVerses || []).map((kv, i) => {
+            {(pagedVerses || []).map((kv, i) => {
               const bookEntry = bookMapping.find((b) => b.id === kv.idBook);
               const bookName = bookEntry ? bookEntry.name : kv.idBook;
               return (
                 <li key={i} style={{ marginBottom: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{kv.translatedWord} — {kv.inflectionWord} {kv.transliteratedWord ? `(${kv.transliteratedWord})` : ''}</div>
-                  <div style={{ fontSize: '0.9em', color: '#555' }}>{bookName} {kv.chapter}:{kv.verseNumber} — {renderHighlightedText(kv.verseText, kv.translatedWord)}</div>
+                  <div style={{ fontWeight: 600 }}>{kv.translatedWord === "" ? "(Sin traducción)" : kv.translatedWord} — {kv.inflectionWord} {kv.transliteratedWord ? `(${kv.transliteratedWord})` : ''}</div>
+                  <div style={{ fontSize: '0.9em'}}>{bookName} {kv.chapter}:{kv.verseNumber} — {renderHighlightedText(kv.verseText, kv.translatedWord, kv.appearanceInVerse)}</div>
                 </li>
               );
             })}
           </ul>
+          {/* Controles de paginación */}
+          {totalPages > 1 && (
+            <Box display="flex" justifyContent="center" mt={1}>
+              <Pagination count={totalPages} page={page} onChange={handlePageChange} color="primary" size="small" />
+            </Box>
+          )}
         </Box>
       )}
 
