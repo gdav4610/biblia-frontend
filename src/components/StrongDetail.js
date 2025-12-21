@@ -97,10 +97,32 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Paginación
   const [page, setPage] = React.useState(1);
   const pageSize = 10;
+  // Stack para recordar historial de strongs en el modal (para botón VOLVER)
+  const [previousStack, setPreviousStack] = React.useState([]);
+  // Flag para evitar realizar un fetch cuando restauramos un estado desde el historial
+  const [skipNextFetch, setSkipNextFetch] = React.useState(false);
+  // Ref para recordar el último texto que se resaltó (para detectar cambios entre llamadas)
+  const lastHighlightedTextRef = React.useRef(null);
+
+  // Si el currentStrongCode contiene un espacio, dividirlo en partes para mostrarlo separado
+  const strongParts = currentStrongCode && String(currentStrongCode).includes(' ') ? String(currentStrongCode).split(' ') : [currentStrongCode];
+
+  // Dividir data.transliteration en partes si contiene espacios (para mostrarlo en dos líneas)
+  const transliterationParts = data && data.transliteration && String(data.transliteration).includes(' ') ? String(data.transliteration).split(' ') : [(data && (data.transliteration || data.transliteration === 0)) ? data.transliteration : ''];
+
+  // Etiqueta dinámica: 'Desglose:' sólo si no hay parts (length < 2), de lo contrario 'Strong:'
+  const displayLabel = (strongParts && strongParts.length < 2) ? 'Strong: ' : 'Desglose: ';
 
   React.useEffect(() => {
     if (!currentStrongCode) {
       setError(true);
+      setLoading(false);
+      return;
+    }
+
+    // Si hemos indicado saltar el siguiente fetch (porque restauramos desde el historial), limpiarlo y no hacer fetch
+    if (skipNextFetch) {
+      setSkipNextFetch(false);
       setLoading(false);
       return;
     }
@@ -176,6 +198,22 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Cambiar el strongCode activo y recargar el modal con ese newStrong
   const changeStrong = (newStrong) => {
     if (!newStrong) return;
+
+    // Guardar estado actual en el stack para permitir volver
+    try {
+      const snapshot = {
+        strongCode: currentStrongCode,
+        data: data,
+        view: view,
+        detailVerses: detailVerses,
+        page: page,
+        detailsError: detailsError
+      };
+      setPreviousStack((s) => [...s, snapshot]);
+    } catch (e) {
+      // en caso de error no bloquear el cambio
+    }
+
     // reset estados relevantes
     setData(null);
     setLoading(true);
@@ -186,6 +224,30 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     setDetailsLoading(false);
     setPage(1);
     setCurrentStrongCode(newStrong);
+  };
+
+  // Restaurar el último strong del stack
+  const goBackStrong = () => {
+    setPreviousStack((stack) => {
+      if (!stack || stack.length === 0) return stack;
+      const newStack = [...stack];
+      const last = newStack.pop();
+
+      // Restaurar valores
+      if (last) {
+        // Evitar que el efecto haga un fetch adicional al restaurar valores desde el stack
+        setSkipNextFetch(true);
+        setCurrentStrongCode(last.strongCode);
+        setData(last.data || null);
+        setView(last.view || 'stats');
+        setDetailVerses(last.detailVerses || null);
+        setPage(last.page || 1);
+        setDetailsError(last.detailsError || false);
+        setLoading(false);
+      }
+
+      return newStack;
+    });
   };
 
   const renderHighlightedText = (text, match, appearanceIndex) => {
@@ -200,6 +262,13 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     let m;
     let count = 0;
 
+    // Parseo seguro del appearanceIndex provisto por el caller
+    const parsed = appearanceIndex != null ? parseInt(String(appearanceIndex).trim(), 10) : NaN;
+    const providedTarget = Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+
+    // Si el texto actual es distinto al último texto evaluado, forzar appearanceIndex = 1
+    const forceFirstIfTextChanged = lastHighlightedTextRef.current !== text;
+
     while ((m = regex.exec(text)) !== null) {
       const matched = m[0];
       const idx = m.index;
@@ -207,8 +276,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       if (idx > lastIndex) parts.push(text.slice(lastIndex, idx));
 
       count += 1;
-      const target = appearanceIndex && Number(appearanceIndex) > 0 ? Number(appearanceIndex) : null;
-      const shouldHighlight = target ? (count === target) : true;
+      // decidir objetivo: si forzamos por cambio de texto usar 1, sino usar el valor provisto (o null para resaltar todo)
+      const target = forceFirstIfTextChanged ? 1 : providedTarget;
+      const shouldHighlight = target === null ? true : (count === target);
 
       if (shouldHighlight) {
         parts.push(<span key={`hl-${count}`} style={{ color: 'red' }}>{matched}</span>);
@@ -224,6 +294,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
     // push remaining text
     if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+
+    // actualizar el registro del último texto evaluado
+    lastHighlightedTextRef.current = text;
 
     return parts;
   }
@@ -255,43 +328,67 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     <Box p={3}>
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <Typography variant="h4" gutterBottom data-testid="strong-title">
-          {data && (data.transliteration || data.transliteration === 0) ? data.transliteration : ""} - {data.meaning}
+            <span>{data.transliteration}</span> - {data.meaning}
         </Typography>
-        {onClose ? (
-          <Button onClick={onClose} size="small" variant="outlined">Cerrar</Button>
-        ) : null}
+        <div>
+          {previousStack && previousStack.length > 0 ? (
+            <Button size="small" onClick={goBackStrong} style={{ marginRight: 8 }}>VOLVER</Button>
+          ) : null}
+
+        </div>
       </Box>
 
       <Typography variant="body2" gutterBottom>
-        <strong>Strong:</strong> {currentStrongCode}
+          <strong>{displayLabel}</strong>{' '}
+        {strongParts && strongParts.length > 1 ? (
+          <span>
+            {strongParts.map((part, idx) => (
+              <Button
+                key={`strong-part-${idx}`}
+                size="small"
+                variant="text"
+                onClick={() => changeStrong(part)}
+                style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}
+              >
+                {transliterationParts[idx]}
+              </Button>
+            ))}
+          </span>
+        ) : (
+          <span>
+            {strongParts[0]}
+          </span>
+        )}
       </Typography>
       <Typography variant="body2" gutterBottom>
         <strong>Hebreo:</strong> <span style={{ fontSize: '1.6em' }}>{data.inflection}</span>
       </Typography>
-      <Typography variant="body2" gutterBottom>
-        <strong>Origen:</strong>{' '}
-        {data && typeof data.idParent === 'string' && data.idParent === "" ? (
-          (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
-            <span>Verbo (sin raíz)</span>
+      {strongParts && strongParts.length < 2 && (
+        <Typography variant="body2" gutterBottom>
+          <strong>Origen: </strong>{' '}
+          {data && typeof data.idParent === 'string' && data.idParent === "" ? (
+            (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
+              <span>Verbo, raíz de todas las palabras en hebreo</span>
+            ) : (
+              <span>{data.parentMeaning}</span>
+            )
+          ) : data && data.idParent ? (
+            <Button size="small" onClick={() => changeStrong(data.idParent)} style={{ textTransform: 'none' }}>
+              {data.parentMeaning}
+            </Button>
           ) : (
-            <span>{data.parentMeaning}</span>
-          )
-        ) : data && data.idParent ? (
-          <Button size="small" onClick={() => changeStrong(data.idParent)}>
-            {data.idParent} - {data.parentMeaning}
-          </Button>
-        ) : (
-          data && data.idParent
-        )}
-        {/* Si existe idParentSec y no es cadena vacía, mostrar un segundo botón con la misma funcionalidad */}
-        {data && typeof data.idParentSec === 'string' && data.idParentSec !== "" ? (
-          <Button size="small" onClick={() => changeStrong(data.idParentSec)} style={{ marginLeft: 10 }}>
-            {data.idParentSec} - {data.parentSecMeaning}
-          </Button>
-        ) : null}
-      </Typography>
+            data && data.idParent
+          )}
+          {/* Si existe idParentSec y no es cadena vacía, mostrar un segundo botón con la misma funcionalidad */}
+          {data && typeof data.idParentSec === 'string' && data.idParentSec !== "" ? (
+            <Button size="small" onClick={() => changeStrong(data.idParentSec)} style={{ marginLeft: 10, textTransform: 'none' }}>
+              {data.parentSecMeaning}
+            </Button>
+          ) : null}
+        </Typography>
+      )}
 
-      <Typography variant="body1" gutterBottom style={{ marginTop: 10 }}>
+      <Typography variant="body1" gutterBottom style={{ marginTop: 10, textTransform: 'none' }}>
         <strong>Apariciones en la Biblia:</strong>
       </Typography>
 

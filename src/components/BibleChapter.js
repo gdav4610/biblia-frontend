@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
@@ -43,6 +43,72 @@ export default function BibleChapter({ book, chapter }) {
         setLoading(false);
       });
   }, [book, chapter]);
+
+
+  // Calcular los 4 keywords más repetidos por strongNumber
+  const topKeywords = useMemo(() => {
+    if (!data || !data.verses) return [];
+    const counts = {};
+    data.verses.forEach((v) => {
+      (v.keywords || []).forEach((k) => {
+        const sn = (k.strongNumber || "").toString();
+        if (!sn) return;
+        // No contar el strongNumber H1961
+        if (sn === "H1961") return;
+        // Solo contar si sourceTransliteration no es nulo/empty
+        if (!k.sourceTransliteration) return;
+        if (!counts[sn]) {
+          counts[sn] = {
+            strongNumber: sn,
+            sourceTransliteration: k.sourceTransliteration || "",
+              sourceMeaning: k.sourceMeaning || "",
+            count: 0,
+          };
+        }
+        counts[sn].count += 1;
+        // preferir sourceTransliteration no vacío
+        if (!counts[sn].sourceTransliteration && k.sourceTransliteration) {
+          counts[sn].sourceTransliteration = k.sourceTransliteration;
+        }
+      });
+    });
+
+    return Object.values(counts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7);
+  }, [data]);
+
+
+  // Calcular los 4 compoundKeywords más repetidos por strongNumber
+    const topCompoundKeywords = useMemo(() => {
+      if (!data || !data.verses) return [];
+      const counts = {};
+      data.verses.forEach((v) => {
+        (v.keywords || []).forEach((k) => {
+          const sn = (k.strongNumber || "").toString();
+          if (!sn) return;
+          // Solo contar si compoundTransliteration no es nulo/empty
+          if (!k.compoundTransliteration) return;
+          if (!counts[sn]) {
+            counts[sn] = {
+              strongNumber: sn,
+              compoundTransliteration: k.compoundTransliteration || "",
+              compoundMeaning: k.compoundMeaning || "",
+              count: 0,
+            };
+          }
+          counts[sn].count += 1;
+          // preferir compoundTransliteration no vacío
+          if (!counts[sn].compoundTransliteration && k.compoundTransliteration) {
+            counts[sn].compoundTransliteration = k.compoundTransliteration;
+          }
+        });
+      });
+
+      return Object.values(counts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 7);
+    }, [data]);
 
   const openStrong = (wordInfo) => {
     setSelectedStrongInfo(wordInfo);
@@ -109,8 +175,17 @@ export default function BibleChapter({ book, chapter }) {
         const matchKeyword = Object.keys(keywordMap).find((kw) => {
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
+          // Si el candidato termina en un signo de puntuación específico, quitar ese último carácter antes de comparar
+          const removeTrailingPunctuation = (str = "") => {
+            if (!str) return str;
+            const last = str.charAt(str.length - 1);
+            // quitar solo si el último carácter es uno de: punto, coma, dos puntos o punto y coma
+            return ".,:;".includes(last) ? str.slice(0, -1) : str;
+          };
           const candidateClean = trimSpaces(candidate); // solo trim de espacios
-          return candidateClean === kw; // comparación exacta
+          // aplicar la eliminación condicional del punto final y comparar exactamente
+          const candidateNoPunct = trimSpaces(removeTrailingPunctuation(candidateClean));
+          return candidateNoPunct === kw; // comparación exacta
         });
 
 
@@ -122,28 +197,28 @@ export default function BibleChapter({ book, chapter }) {
           // Fallbacks para mostrar en el tooltip: si no viene sourceInflection usar compoundInflection,
           // si no viene sourceTransliteration usar compoundTransliteration
           const inflectionDisplay = wordInfo.sourceInflection || wordInfo.compoundInflection || '';
-          const sourceTransliterationDisplay = wordInfo.sourceTransliteration || wordInfo.compoundTransliteration || '';
+          const transliterationDisplay = wordInfo.sourceTransliteration || wordInfo.compoundTransliteration || '';
 
           tokens.push(
             <Tooltip
               key={`kw-${i}`}
               title={
-                <div style={{ fontSize: "1.02rem" }}>
-                  <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  ( de <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
-                  {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {sourceTransliterationDisplay ? <em>{sourceTransliterationDisplay}</em> : null}) <br />
-                  { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
-                  {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
-                  <Button
-                    onClick={() => openStrong(wordInfo)}
-                    size="small"
-                    style={{ color: '#e0f2ff', textTransform: 'none', padding: 0, minWidth: 0 }}
-                  >
-                    Ver detalle (Strong {wordInfo.strongNumber})
-                  </Button>
-                </div>
-              }
-              arrow
-            >
+                <div style={{ fontSize: "1.02rem", minWidth: '350px', maxWidth: '520px' }}>
+                   <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  ( de <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
+                   {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
+                   { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
+                   {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
+                   <Button
+                     onClick={() => openStrong(wordInfo)}
+                     size="small"
+                     style={{ color: '#e0f2ff', textTransform: 'none', padding: 0, minWidth: 0 }}
+                   >
+                     Ver detalle (Strong {wordInfo.strongNumber})
+                   </Button>
+                 </div>
+               }
+               arrow
+             >
               <span
                 data-strong={wordInfo.strongNumber}
                 data-llave={`strong-${wordInfo.strongNumber}`}
@@ -186,6 +261,115 @@ export default function BibleChapter({ book, chapter }) {
   return (
     <Fade in={!loading} timeout={500}>
       <Box>
+
+        {/* Mostrar top 4 keywords en la parte superior */}
+        {topKeywords && topKeywords.length > 0 && (
+          <Box mb={1}>
+            <strong>Top palabras:</strong>{' '}
+            {topKeywords.map((k) => {
+              const isActive = hoveredStrong === k.strongNumber;
+              const handleActivate = () => {
+                if (isActive) {
+                  // si ya está activo, simplemente quitar subrayado
+                  setHoveredStrong(null);
+                  return;
+                }
+
+                // limpiar cualquier subrayado previo
+                setHoveredStrong(null);
+                // en el siguiente tick fijar el strong seleccionado
+                setTimeout(() => setHoveredStrong(k.strongNumber), 0);
+              };
+
+              const handleKeyDown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleActivate();
+                }
+              };
+
+              return (
+                <span
+                  key={k.strongNumber}
+                  onClick={handleActivate}
+                  onKeyDown={handleKeyDown}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isActive}
+                  style={{
+                    display: 'inline-block',
+                    marginRight: '0.6rem',
+                    padding: '0.18rem 0.45rem',
+                    background: isActive ? '#e6f2ff' : '#f0f6ff',
+                    borderRadius: '12px',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    textDecoration: isActive ? 'underline' : 'none',
+                    outline: 'none'
+                  }}
+                >
+                  {k.sourceTransliteration || `Strong ${k.strongNumber}`} - {k.sourceMeaning} ({k.count})
+                </span>
+              );
+            })}
+          </Box>
+        )}
+
+        {/* Mostrar top 4 keywords en la parte superior */}
+        {topCompoundKeywords && topCompoundKeywords.length > 0 && (
+          <Box mb={1}>
+            <strong>Top frases:</strong>{' '}
+            {topCompoundKeywords.map((k) => {
+              const isActive = hoveredStrong === k.strongNumber;
+              const handleActivate = () => {
+                if (isActive) {
+                  // si ya está activo, simplemente quitar subrayado
+                  setHoveredStrong(null);
+                  return;
+                }
+
+                // limpiar cualquier subrayado previo
+                setHoveredStrong(null);
+                // en el siguiente tick fijar el strong seleccionado
+                setTimeout(() => setHoveredStrong(k.strongNumber), 0);
+              };
+
+              const handleKeyDown = (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleActivate();
+                }
+              };
+
+              return (
+                <span
+                  key={k.strongNumber}
+                  onClick={handleActivate}
+                  onKeyDown={handleKeyDown}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isActive}
+                  style={{
+                    display: 'inline-block',
+                    marginRight: '0.6rem',
+                    padding: '0.18rem 0.45rem',
+                    background: isActive ? '#e6f2ff' : '#f0f6ff',
+                    borderRadius: '12px',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    textDecoration: isActive ? 'underline' : 'none',
+                    outline: 'none'
+                  }}
+                >
+                  {k.compoundTransliteration || `Strong ${k.strongNumber}`} - {k.compoundMeaning} ({k.count})
+                </span>
+              );
+            })}
+          </Box>
+        )}
+
+
+
         <h2>
           {data.book} {data.chapter}
         </h2>
