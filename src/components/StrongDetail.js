@@ -97,6 +97,10 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Paginación
   const [page, setPage] = React.useState(1);
   const pageSize = 10;
+  // Estado para mostrar el capítulo de la primera aparición
+  const [chapterData, setChapterData] = React.useState(null);
+  const [chapterLoading, setChapterLoading] = React.useState(false);
+  const [chapterError, setChapterError] = React.useState(false);
   // Stack para recordar historial de strongs en el modal (para botón VOLVER)
   const [previousStack, setPreviousStack] = React.useState([]);
   // Flag para evitar realizar un fetch cuando restauramos un estado desde el historial
@@ -112,6 +116,57 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
   // Etiqueta dinámica: 'Desglose:' sólo si no hay parts (length < 2), de lo contrario 'Strong:'
   const displayLabel = (strongParts && strongParts.length < 2) ? 'Strong: ' : 'Desglose: ';
+
+  // Nombre del libro de la primera aparición (mapear id a bookMapping)
+  const firstAppBookName = (data && data.firstAppBook !== undefined && data.firstAppBook !== null)
+    ? (bookMapping.find(b => b.id === Number(data.firstAppBook)) || {}).name || String(data.firstAppBook)
+    : null;
+
+  // Abrir el capítulo de la primera aparición y reemplazar el contenido del modal
+  const openFirstAppearanceChapter = (bookId, chapter, verse) => {
+    if (!bookId || chapter === undefined || chapter === null) return;
+
+    // Guardar snapshot para poder volver
+    try {
+      const snapshot = {
+        strongCode: currentStrongCode,
+        data: data,
+        view: view,
+        detailVerses: detailVerses,
+        page: page,
+        detailsError: detailsError,
+        chapterData: chapterData,
+        chapterLoading: chapterLoading,
+        chapterError: chapterError
+      };
+      setPreviousStack((s) => [...s, snapshot]);
+    } catch (e) {
+      // no bloquear
+    }
+
+    setChapterLoading(true);
+    setChapterError(false);
+    setChapterData(null);
+
+    // Usar ID numérico del libro en la URL y agregar idVerse como query param si está disponible
+    let url = `/api/bible/chapter/${encodeURIComponent(String(bookId))}/${encodeURIComponent(String(chapter))}`;
+    if (verse !== undefined && verse !== null && String(verse) !== 'null') {
+      url += `?idVerse=${encodeURIComponent(String(verse))}`;
+    }
+
+    // Ejecutar fetch
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then((json) => {
+        setChapterData(json);
+        setView('chapter');
+      })
+      .catch(() => setChapterError(true))
+      .finally(() => setChapterLoading(false));
+  };
 
   React.useEffect(() => {
     if (!currentStrongCode) {
@@ -243,6 +298,10 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         setDetailVerses(last.detailVerses || null);
         setPage(last.page || 1);
         setDetailsError(last.detailsError || false);
+        // Restaurar estado del capítulo si viene en el snapshot
+        setChapterData(last.chapterData || null);
+        setChapterLoading(last.chapterLoading || false);
+        setChapterError(last.chapterError || false);
         setLoading(false);
       }
 
@@ -388,9 +447,59 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         </Typography>
       )}
 
+      {/* Mostrar 'Primera aparición' si viene en la respuesta */}
+      {data && (data.firstAppBook !== undefined && data.firstAppBook !== null) && (
+        <Typography variant="body2" gutterBottom>
+          <strong>Primera aparición: </strong>
+          <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}>
+            {firstAppBookName} {String(data.firstAppChapter)}:{String(data.firstAppVerse)}
+           </Button>
+         </Typography>
+       )}
+
+
       <Typography variant="body1" gutterBottom style={{ marginTop: 10, textTransform: 'none' }}>
         <strong>Apariciones en la Biblia:</strong>
       </Typography>
+
+      {/* Vista del capítulo obtenido (reemplaza el contenido del modal) */}
+      {view === 'chapter' && (
+        <Box>
+          <Box mb={1}>
+            <Button size="small" onClick={goBackStrong} style={{ marginRight: 8 }}>Volver</Button>
+            {chapterLoading ? <CircularProgress size={18} /> : null}
+            {chapterError ? <Typography color="error" variant="body2" component="span" style={{ marginLeft: 8 }}>Error al cargar capítulo</Typography> : null}
+          </Box>
+
+          {chapterData ? (
+            <Box>
+              {Array.isArray(chapterData.verses) ? (
+                <ul>
+                  {chapterData.verses.map((v, idx) => (
+                    <li key={idx} style={{ marginBottom: 6 }}>
+                      <Typography variant="h6">{firstAppBookName} {String(data.firstAppChapter)}:{v.verseNumber}</Typography>{' '}
+                      {(() => {
+                        // Buscar en v.keywords el primer objeto cuyo strongNumber coincida con currentStrongCode
+                        let translated = null;
+                        if (v && Array.isArray(v.keywords)) {
+                          const found = v.keywords.find(k => k && (String(k.strongNumber) === String(currentStrongCode) || String(k.idWord) === String(currentStrongCode)));
+                          if (found) translated = found.translatedWord || null;
+                        }
+                        return renderHighlightedText(v.text, translated, 1);
+                      })()}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(chapterData, null, 2)}</pre>
+              )}
+            </Box>
+          ) : (
+            !chapterLoading && <Typography variant="body2">No hay datos del capítulo.</Typography>
+          )}
+        </Box>
+      )}
+
 
       {/* Vista: estadísticas (lista original) */}
       {view === "stats" && (
