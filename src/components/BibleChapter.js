@@ -203,8 +203,8 @@ export default function BibleChapter({ book, chapter }) {
             <Tooltip
               key={`kw-${i}`}
               title={
-                <div style={{ fontSize: "1.02rem", minWidth: '350px', maxWidth: '520px' }}>
-                   <span style={{ fontSize: "1.5em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span>  ( de <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
+                <div style={{ fontSize: "1.02rem", minWidth: '330px', maxWidth: '650px' }}>
+                   <span style={{ fontSize: "1.4em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ( de <span style={{ fontSize: "1.2em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
                    {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
                    {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />

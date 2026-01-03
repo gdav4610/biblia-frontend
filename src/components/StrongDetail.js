@@ -117,6 +117,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Etiqueta dinámica: 'Desglose:' sólo si no hay parts (length < 2), de lo contrario 'Strong:'
   const displayLabel = (strongParts && strongParts.length < 2) ? 'Strong: ' : 'Desglose: ';
 
+  // añadir cerca de otras constantes derivadas de currentStrongCode
+  const isGreek = currentStrongCode && String(currentStrongCode).startsWith('G');
+
   // Nombre del libro de la primera aparición (mapear id a bookMapping)
   const firstAppBookName = (data && data.firstAppBook !== undefined && data.firstAppBook !== null)
     ? (bookMapping.find(b => b.id === Number(data.firstAppBook)) || {}).name || String(data.firstAppBook)
@@ -420,7 +423,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         )}
       </Typography>
       <Typography variant="body2" gutterBottom>
-        <strong>Hebreo:</strong> <span style={{ fontSize: '1.6em' }}>{data.inflection}</span>
+        <strong>{isGreek ? 'Griego: ' : 'Hebreo: '}</strong>{' '}
+        <span style={{ fontSize: '1.6em' }}>{data.inflection}</span>
       </Typography>
       {strongParts && strongParts.length < 2 && (
         <Typography variant="body2" gutterBottom>
