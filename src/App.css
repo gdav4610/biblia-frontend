@@ -51,7 +51,4 @@
   padding: 0 2px;
 }
 
-/* Ajuste global del tamaño de fuente para tooltips de MUI */
-.MuiTooltip-tooltip {
-  font-size: 1.05rem;
-}
+

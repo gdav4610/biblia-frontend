@@ -5,6 +5,8 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Pagination from '@mui/material/Pagination';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 export default function StrongDetail({ strongCode = null, strongNumber: propStrongNumber = null, initialData = null, onClose = null }) {
   // 📜 Lista de libros con IDs numéricos
@@ -101,6 +103,46 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const [chapterData, setChapterData] = React.useState(null);
   const [chapterLoading, setChapterLoading] = React.useState(false);
   const [chapterError, setChapterError] = React.useState(false);
+  // Estado para incluir resultados de la Septuaginta (LXX). Persistido en localStorage.
+  const [includeLXX, setIncludeLXX] = React.useState(() => {
+    try {
+      const s = localStorage.getItem('strongDetail.includeLXX');
+      // Por defecto NO incluir LXX si no hay valor en localStorage
+      return s === null ? false : s === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('strongDetail.includeLXX', includeLXX ? 'true' : 'false');
+    } catch (e) {
+      // ignore
+    }
+  }, [includeLXX]);
+
+  // Última palabra seleccionada para ver detalles (para recargar si toggle LXX cambia)
+  const [lastSelectedTranslatedWord, setLastSelectedTranslatedWord] = React.useState(null);
+  // Flag para indicar que includeLXX fue toggled por el usuario y requiere recarga adicional
+  const [includeLXXToggled, setIncludeLXXToggled] = React.useState(false);
+
+  // Handler que limpia el modal y cambia includeLXX; la recarga la realiza el useEffect de stats
+  const handleIncludeLXXChange = (checked) => {
+    // limpiar vistas y datos del modal inmediatamente
+    setData(null);
+    setLoading(true);
+    setError(false);
+    setView('stats');
+    setDetailVerses(null);
+    setDetailsError(false);
+    setDetailsLoading(false);
+    setPage(1);
+    // marcar que se hizo toggle para que la useEffect dispare la recarga de detalles si aplica
+    setIncludeLXXToggled(true);
+    setIncludeLXX(checked);
+  };
+
   // Stack para recordar historial de strongs en el modal (para botón VOLVER)
   const [previousStack, setPreviousStack] = React.useState([]);
   // Flag para evitar realizar un fetch cuando restauramos un estado desde el historial
@@ -157,6 +199,12 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       url += `?idVerse=${encodeURIComponent(String(verse))}`;
     }
 
+    // Si se solicita incluir resultados de la Septuaginta (LXX), agregar el query param apropiado
+    if (includeLXX) {
+      const sep = url.includes('?') ? '&' : '?';
+      url = `${url}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+    }
+
     // Ejecutar fetch
     fetch(url)
       .then((res) => {
@@ -187,8 +235,16 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
     setError(false);
 
-    // Obtener estadísticas del strong activo (currentStrongCode). Usar ruta relativa para evitar problemas de CORS en desarrollo.
-    fetch(`/api/strongs/${encodeURIComponent(currentStrongCode)}/stats`)
+    // Obtener estadísticas del strong activo (currentStrongCode), incluyendo el filtro includeLXX.
+    let statsUrl = `/api/strongs/${encodeURIComponent(currentStrongCode)}/stats`;
+    try {
+      const sep = statsUrl.includes('?') ? '&' : '?';
+      statsUrl = `${statsUrl}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+    } catch (e) {
+      // ignore
+    }
+
+    fetch(statsUrl)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -198,11 +254,19 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           setError(true);
         } else {
           setData(json);
+          // Si includeLXXToggled está activo, volver a cargar los detalles con la última palabra seleccionada
+          if (includeLXXToggled) {
+            if (lastSelectedTranslatedWord) {
+              onCountClick(lastSelectedTranslatedWord);
+            }
+            // independientemente de si había una palabra seleccionada, limpiar el flag para evitar recargas repetidas
+            setIncludeLXXToggled(false);
+          }
         }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [currentStrongCode]);
+  }, [currentStrongCode, includeLXX]);
 
   // Resetear la página cada vez que cambian los detailVerses
   React.useEffect(() => {
@@ -221,13 +285,16 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     setDetailsLoading(true);
     setDetailsError(false);
     setDetailVerses(null);
+    setLastSelectedTranslatedWord(translatedWord); // Guardar la última palabra seleccionada
 
-    // Construir URL: no enviar translatedWord si es null o la cadena "null"
+    // Construir URL: incluir includeLXX y opcionalmente translatedWord (si no es null)
     let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
+    const params = [];
     if (translatedWord !== null && translatedWord !== undefined && translatedWord !== 'null') {
-      const sep = url.includes('?') ? '&' : '?';
-      url = `${url}${sep}translatedWord=${encodeURIComponent(translatedWord)}`;
+      params.push(`translatedWord=${encodeURIComponent(translatedWord)}`);
     }
+    params.push(`includeLXX=${includeLXX ? 'true' : 'false'}`);
+    if (params.length > 0) url = `${url}?${params.join('&')}`;
 
     fetch(url)
       .then((res) => {
@@ -461,10 +528,27 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
          </Typography>
        )}
 
+      <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
+        <Typography variant="body1" gutterBottom>
+          <strong>Apariciones en la Biblia:</strong>
+        </Typography>
 
-      <Typography variant="body1" gutterBottom style={{ marginTop: 10, textTransform: 'none' }}>
-        <strong>Apariciones en la Biblia:</strong>
-      </Typography>
+        {/* Checkbox para incluir/excluir resultados de la Septuaginta (LXX) - solo para Strongs griegos */}
+        {isGreek && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={includeLXX}
+                onChange={(e) => handleIncludeLXXChange(e.target.checked)}
+                color="primary"
+                size="small"
+              />
+            }
+            label="Incluir resultados de la Septuaginta (LXX)"
+            style={{ marginLeft: 'auto', marginTop: 3 }}
+          />
+        )}
+      </Box>
 
       {/* Vista del capítulo obtenido (reemplaza el contenido del modal) */}
       {view === 'chapter' && (

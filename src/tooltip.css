@@ -16,3 +16,8 @@
 .MuiTooltip-tooltip {
   font-size: 1.02rem;
 }
+
+.tooltip .tooltip-inner {
+  width: 7em;
+  white-space: normal;
+}

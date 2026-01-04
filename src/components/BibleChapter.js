@@ -139,10 +139,10 @@ export default function BibleChapter({ book, chapter }) {
 
     const keywordMap = Object.fromEntries(
         (verse.keywords || []).map((k) => {
-          const key = (k.translatedWord || "").toString();
+          const key = (k.translatedWord.trim() || "").toString();
 
           const normalized = {
-            translatedWord: k.translatedWord,
+            translatedWord: k.translatedWord.trim(),
             inflectionWord: k.inflectionWord,
             transliteratedWord: k.transliteratedWord,
             strongNumber: k.strongNumber,
@@ -180,7 +180,7 @@ export default function BibleChapter({ book, chapter }) {
             if (!str) return str;
             const last = str.charAt(str.length - 1);
             // quitar solo si el último carácter es uno de: punto, coma, dos puntos o punto y coma
-            return ".,:;".includes(last) ? str.slice(0, -1) : str;
+            return ".,:;?".includes(last) ? str.slice(0, -1) : str;
           };
           const candidateClean = trimSpaces(candidate); // solo trim de espacios
           // aplicar la eliminación condicional del punto final y comparar exactamente
@@ -203,8 +203,8 @@ export default function BibleChapter({ book, chapter }) {
             <Tooltip
               key={`kw-${i}`}
               title={
-                <div style={{ fontSize: "1.02rem", minWidth: '330px', maxWidth: '650px' }}>
-                   <span style={{ fontSize: "1.4em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ( de <span style={{ fontSize: "1.2em", marginTop: "0px"}}>{inflectionDisplay}</span> ) <br />
+                <div style={{ fontSize: "1rem" }}>
+                   <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ( de <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{inflectionDisplay}</span> ) <br />
                    {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
                    {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
@@ -300,7 +300,7 @@ export default function BibleChapter({ book, chapter }) {
                     display: 'inline-block',
                     marginRight: '0.6rem',
                     padding: '0.18rem 0.45rem',
-                    background: isActive ? '#e6f2ff' : '#f0f6ff',
+                    background: isActive ? '#d19b64' : '#e3b88d',
                     borderRadius: '12px',
                     fontSize: '0.95rem',
                     cursor: 'pointer',
@@ -353,7 +353,7 @@ export default function BibleChapter({ book, chapter }) {
                     display: 'inline-block',
                     marginRight: '0.6rem',
                     padding: '0.18rem 0.45rem',
-                    background: isActive ? '#e6f2ff' : '#f0f6ff',
+                    background: isActive ? '#d19b64' : '#e3b88d',
                     borderRadius: '12px',
                     fontSize: '0.95rem',
                     cursor: 'pointer',

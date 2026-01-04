@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import IconButton from "@mui/material/IconButton";
@@ -27,7 +27,23 @@ function BibleChapterPage() {
 	
   const [book, setBook] = useState("1"); //Genesis
   const [chapter, setChapter] = useState(1);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const s = localStorage.getItem("app.darkMode");
+      return s === "true";
+    } catch (e) {
+      return false;
+    }
+  });
+
+  // Persistir la preferencia al cambiar
+  useEffect(() => {
+    try {
+      localStorage.setItem("app.darkMode", darkMode ? "true" : "false");
+    } catch (e) {
+      // ignore
+    }
+  }, [darkMode]);
 
   const handleSelect = (newBook, newChapter) => {
     setBook(newBook);

@@ -1,99 +1,140 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function ChapterSelector({ onSelect }) {
-  const [bookId, setBookId] = useState(1);
-  const [chapter, setChapter] = useState(1);
+  const [bookId, setBookId] = useState(() => {
+    try {
+      const s = localStorage.getItem("chapterSelector.bookId");
+      return s ? Number(s) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+
+  const [chapter, setChapter] = useState(() => {
+    try {
+      const s = localStorage.getItem("chapterSelector.chapter");
+      return s ? Number(s) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
 
   // 📜 Lista de libros con IDs numéricos
   const oldTestament = [
-    { id: 1, name: "Génesis" },
-    { id: 2, name: "Éxodo" },
-    { id: 3, name: "Levítico" },
-    { id: 4, name: "Números" },
-    { id: 5, name: "Deuteronomio" },
-    { id: 6, name: "Josué" },
-    { id: 7, name: "Jueces" },
-    { id: 8, name: "Rut" },
-    { id: 9, name: "1 Samuel" },
-    { id: 10, name: "2 Samuel" },
-    { id: 11, name: "1 Reyes" },
-    { id: 12, name: "2 Reyes" },
-    { id: 13, name: "1 Crónicas" },
-    { id: 14, name: "2 Crónicas" },
-    { id: 15, name: "Esdras" },
-    { id: 16, name: "Nehemías" },
-    { id: 17, name: "Ester" },
-    { id: 18, name: "Job" },
-    { id: 19, name: "Salmos" },
-    { id: 20, name: "Proverbios" },
-    { id: 21, name: "Eclesiastés" },
-    { id: 22, name: "Cantares" },
-    { id: 23, name: "Isaías" },
-    { id: 24, name: "Jeremías" },
-    { id: 25, name: "Lamentaciones" },
-    { id: 26, name: "Ezequiel" },
-    { id: 27, name: "Daniel" },
-    { id: 28, name: "Oseas" },
-    { id: 29, name: "Joel" },
-    { id: 30, name: "Amós" },
-    { id: 31, name: "Abdías" },
-    { id: 32, name: "Jonás" },
-    { id: 33, name: "Miqueas" },
-    { id: 34, name: "Nahúm" },
-    { id: 35, name: "Habacuc" },
-    { id: 36, name: "Sofonías" },
-    { id: 37, name: "Hageo" },
-    { id: 38, name: "Zacarías" },
-    { id: 39, name: "Malaquías" }
+    { id: 1, name: "Génesis", capitulos: 50 },
+    { id: 2, name: "Éxodo", capitulos: 40 },
+    { id: 3, name: "Levítico", capitulos: 27 },
+    { id: 4, name: "Números", capitulos: 36 },
+    { id: 5, name: "Deuteronomio", capitulos: 34 },
+    { id: 6, name: "Josué", capitulos: 24 },
+    { id: 7, name: "Jueces", capitulos: 21 },
+    { id: 8, name: "Rut", capitulos: 4 },
+    { id: 9, name: "1 Samuel", capitulos: 31 },
+    { id: 10, name: "2 Samuel", capitulos: 24 },
+    { id: 11, name: "1 Reyes", capitulos: 22 },
+    { id: 12, name: "2 Reyes", capitulos: 25 },
+    { id: 13, name: "1 Crónicas", capitulos: 29 },
+    { id: 14, name: "2 Crónicas", capitulos: 36 },
+    { id: 15, name: "Esdras", capitulos: 10 },
+    { id: 16, name: "Nehemías", capitulos: 13 },
+    { id: 17, name: "Ester", capitulos: 10 },
+    { id: 18, name: "Job", capitulos: 42 },
+    { id: 19, name: "Salmos", capitulos: 150 },
+    { id: 20, name: "Proverbios", capitulos: 31 },
+    { id: 21, name: "Eclesiastés", capitulos: 12 },
+    { id: 22, name: "Cantares", capitulos: 8 },
+    { id: 23, name: "Isaías", capitulos: 66 },
+    { id: 24, name: "Jeremías", capitulos: 52 },
+    { id: 25, name: "Lamentaciones", capitulos: 5 },
+    { id: 26, name: "Ezequiel", capitulos: 48 },
+    { id: 27, name: "Daniel", capitulos: 12 },
+    { id: 28, name: "Oseas", capitulos: 14 },
+    { id: 29, name: "Joel", capitulos: 3 },
+    { id: 30, name: "Amós", capitulos: 9 },
+    { id: 31, name: "Abdías", capitulos: 1 },
+    { id: 32, name: "Jonás", capitulos: 4 },
+    { id: 33, name: "Miqueas", capitulos: 7 },
+    { id: 34, name: "Nahúm", capitulos: 3 },
+    { id: 35, name: "Habacuc", capitulos: 3 },
+    { id: 36, name: "Sofonías", capitulos: 3 },
+    { id: 37, name: "Hageo", capitulos: 2 },
+    { id: 38, name: "Zacarías", capitulos: 14 },
+    { id: 39, name: "Malaquías", capitulos: 4 }
   ];
 
   const newTestament = [
-    { id: 40, name: "Mateo" },
-    { id: 41, name: "Marcos" },
-    { id: 42, name: "Lucas" },
-    { id: 43, name: "Juan" },
-    { id: 44, name: "Hechos" },
-    { id: 45, name: "Romanos" },
-    { id: 46, name: "1 Corintios" },
-    { id: 47, name: "2 Corintios" },
-    { id: 48, name: "Gálatas" },
-    { id: 49, name: "Efesios" },
-    { id: 50, name: "Filipenses" },
-    { id: 51, name: "Colosenses" },
-    { id: 52, name: "1 Tesalonicenses" },
-    { id: 53, name: "2 Tesalonicenses" },
-    { id: 54, name: "1 Timoteo" },
-    { id: 55, name: "2 Timoteo" },
-    { id: 56, name: "Tito" },
-    { id: 57, name: "Filemón" },
-    { id: 58, name: "Hebreos" },
-    { id: 59, name: "Santiago" },
-    { id: 60, name: "1 Pedro" },
-    { id: 61, name: "2 Pedro" },
-    { id: 62, name: "1 Juan" },
-    { id: 63, name: "2 Juan" },
-    { id: 64, name: "3 Juan" },
-    { id: 65, name: "Judas" },
-    { id: 66, name: "Apocalipsis" }
+    { id: 40, name: "Mateo", capitulos: 28 },
+    { id: 41, name: "Marcos", capitulos: 16 },
+    { id: 42, name: "Lucas", capitulos: 24 },
+    { id: 43, name: "Juan", capitulos: 21 },
+    { id: 44, name: "Hechos", capitulos: 28 },
+    { id: 45, name: "Romanos", capitulos: 16 },
+    { id: 46, name: "1 Corintios", capitulos: 16 },
+    { id: 47, name: "2 Corintios", capitulos: 13 },
+    { id: 48, name: "Gálatas", capitulos: 6 },
+    { id: 49, name: "Efesios", capitulos: 6 },
+    { id: 50, name: "Filipenses", capitulos: 4 },
+    { id: 51, name: "Colosenses", capitulos: 4 },
+    { id: 52, name: "1 Tesalonicenses", capitulos: 5 },
+    { id: 53, name: "2 Tesalonicenses", capitulos: 3 },
+    { id: 54, name: "1 Timoteo", capitulos: 6 },
+    { id: 55, name: "2 Timoteo", capitulos: 4 },
+    { id: 56, name: "Tito", capitulos: 3 },
+    { id: 57, name: "Filemón", capitulos: 1 },
+    { id: 58, name: "Hebreos", capitulos: 13 },
+    { id: 59, name: "Santiago", capitulos: 5 },
+    { id: 60, name: "1 Pedro", capitulos: 5 },
+    { id: 61, name: "2 Pedro", capitulos: 3 },
+    { id: 62, name: "1 Juan", capitulos: 5 },
+    { id: 63, name: "2 Juan", capitulos: 1 },
+    { id: 64, name: "3 Juan", capitulos: 1 },
+    { id: 65, name: "Judas" , capitulos: 1 },
+    { id: 66, name: "Apocalipsis", capitulos: 22 }
   ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSelect(bookId, Number(chapter));
+    // submit ya no hace nada porque onSelect se invoca desde el useEffect al cambiar bookId/capítulo
   };
+
+  // Helper: obtiene el libro por ID desde OT o NT
+  const getBookById = (id) => {
+    return oldTestament.find((b) => b.id === id) || newTestament.find((b) => b.id === id);
+  };
+
+  // Cuando cambia el bookId o chapter, clampea, guarda en localStorage y notifica con onSelect
+  useEffect(() => {
+    const book = getBookById(bookId);
+    const maxChapters = book ? book.capitulos : 1;
+    let clamped = Math.max(1, Math.min(chapter, maxChapters));
+    if (clamped !== chapter) {
+      setChapter(clamped);
+      return; // espera al siguiente ciclo para invocar onSelect con el capítulo clampeado
+    }
+
+    try {
+      localStorage.setItem("chapterSelector.bookId", String(bookId));
+      localStorage.setItem("chapterSelector.chapter", String(clamped));
+    } catch (e) {
+      // ignore
+    }
+
+    onSelect(bookId, clamped);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookId, chapter]);
 
   const handlePrev = () => {
     if (chapter > 1) {
       const newChapter = chapter - 1;
       setChapter(newChapter);
-      onSelect(bookId, newChapter);
     }
   };
 
   const handleNext = () => {
-    const newChapter = chapter + 1;
+    const book = getBookById(bookId);
+    const maxChapters = book ? book.capitulos : Infinity;
+    const newChapter = Math.min(chapter + 1, maxChapters);
     setChapter(newChapter);
-    onSelect(bookId, newChapter);
   };
 
   return (
@@ -134,16 +175,26 @@ export default function ChapterSelector({ onSelect }) {
 
       <label>
         Capítulo:
-        <input
-          type="number"
-          min="1"
+        {/* reemplazamos el input por un select dinámico basado en el libro seleccionado */}
+        <select
           value={chapter}
-          onChange={(e) => setChapter(Number(e.target.value))}
-          style={{ width: "60px", marginLeft: "0.5rem" }}
-        />
+          onChange={(e) => {
+            const newChapter = Number(e.target.value);
+            setChapter(newChapter);
+          }}
+          style={{ marginLeft: "0.5rem", width: "80px" }}
+        >
+          {(() => {
+            const book = getBookById(bookId);
+            const max = book ? book.capitulos : 1;
+            return Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ));
+          })()}
+        </select>
       </label>
-
-      <button type="submit">Cargar</button>
 
       <div style={{ display: "flex", gap: "0.5rem" }}>
         <button type="button" onClick={handlePrev} disabled={chapter <= 1}>
