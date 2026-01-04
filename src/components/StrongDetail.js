@@ -485,9 +485,15 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           </span>
         ) : (
           <span>
-            {strongParts[0]}
-          </span>
-        )}
+        <a
+                              href={`https://www.blueletterbible.org/lexicon/${encodeURIComponent(String(currentStrongCode))}/rvr60/tr/0-1/`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ marginLeft: 12, fontSize: '0.9em' }}
+                            >{strongParts[0]}
+                            </a>
+      </span>
+    )}
       </Typography>
       <Typography variant="body2" gutterBottom>
         <strong>{isGreek ? 'Griego: ' : 'Hebreo: '}</strong>{' '}
@@ -524,9 +530,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           <strong>Primera aparición: </strong>
           <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}>
             {firstAppBookName} {String(data.firstAppChapter)}:{String(data.firstAppVerse)}
-           </Button>
-         </Typography>
-       )}
+          </Button>
+        </Typography>
+      )}
 
       <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
         <Typography variant="body1" gutterBottom>
