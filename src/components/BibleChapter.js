@@ -166,6 +166,15 @@ export default function BibleChapter({ book, chapter }) {
     let i = 0;
 
     while (i < words.length) {
+        // Si la palabra es el placeholder de salto de párrafo, insertar un salto de línea
+        if (words[i] === '\\par' || words[i] === '\\\\par') {
+          tokens.push(<br key={`br-${i}`} />);
+          // mantener el espacio después del salto para consistencia visual
+          tokens.push(" ");
+          i++;
+          continue;
+        }
+
         // Intentar emparejar una frase clave (puede ser de varias palabras)
         const nextFew = words.slice(i, i + 5).join(" "); // mirar hasta 5 palabras
 
@@ -250,10 +259,14 @@ export default function BibleChapter({ book, chapter }) {
     }
 
     return (
-      <p key={verse.verseNumber} style={{ marginBottom: "0.3rem", lineHeight: "1.6", marginTop: "0.3rem",}}>
-        <strong>{verse.verseNumber} </strong>
-        {tokens}
-      </p>
+      <div key={verse.verseNumber} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.3rem', marginTop: '0.3rem' }}>
+        <div style={{ flex: '0 0 1rem', textAlign: 'right', paddingRight: '0.4rem', lineHeight: '1.6' }}>
+          <strong>{verse.verseNumber}</strong>
+        </div>
+        <div style={{ flex: '1 1 auto', lineHeight: '1.6' }}>
+          {tokens}
+        </div>
+      </div>
     );
   };
 
