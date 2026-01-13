@@ -213,8 +213,8 @@ export default function BibleChapter({ book, chapter }) {
               key={`kw-${i}`}
               title={
                 <div style={{ fontSize: "1rem" }}>
-                   <span style={{ fontSize: "1.3em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ( de <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{inflectionDisplay}</span> ) <br />
-                   {wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null} (de {transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
+                   <span style={{ fontSize: "1.4em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ({wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null}) <br />
+                   forma de <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{inflectionDisplay}</span> ({transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
                    {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
                    <Button

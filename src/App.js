@@ -52,6 +52,10 @@ function BibleChapterPage() {
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
 
+  // Colores tipo papiro para el fondo en modo claro
+  const papiroDefault = "#f5efdc"; // color de fondo general (papiro)
+  const papiroPaper = "#faf8f2";   // color para superficies (paper)
+
   const theme = createTheme({
     palette: {
       mode: darkMode ? "dark" : "light",
@@ -59,8 +63,8 @@ function BibleChapterPage() {
         main: darkMode ? "#90caf9" : "#1976d2",
       },
       background: {
-        default: darkMode ? "#121212" : "#fafafa",
-        paper: darkMode ? "#1e1e1e" : "#ffffff",
+        default: darkMode ? "#121212" : papiroDefault,
+        paper: darkMode ? "#1e1e1e" : papiroPaper,
       },
     },
   });

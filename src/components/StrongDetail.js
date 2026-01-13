@@ -167,6 +167,11 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     ? (bookMapping.find(b => b.id === Number(data.firstAppBook)) || {}).name || String(data.firstAppBook)
     : null;
 
+  // Mostrar "LXX" antes del nombre del libro en la primera aparición si es griego y el libro es del A.T.
+  const displayFirstAppBookName = (isGreek && data && data.firstAppBook !== undefined && data.firstAppBook !== null && Number(data.firstAppBook) <= 39)
+    ? `(LXX) ${firstAppBookName}`
+    : firstAppBookName;
+
   // Abrir el capítulo de la primera aparición y reemplazar el contenido del modal
   const openFirstAppearanceChapter = (bookId, chapter, verse) => {
     if (!bookId || chapter === undefined || chapter === null) return;
@@ -430,6 +435,13 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     return parts;
   }
 
+  // Reemplaza apariciones de "\\par" o "\par" por saltos de línea '\n'
+  const replaceParWithNewline = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    // Primero reemplazar '\\par' (doble barra) luego '\par' (simple)
+    return text.replace(/\\\\par/g, '\n').replace(/\\par/g, '\n');
+  }
+
   if (loading) {
     return (
       <Box p={3}>
@@ -571,7 +583,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                 <ul>
                   {chapterData.verses.map((v, idx) => (
                     <li key={idx} style={{ marginBottom: 6 }}>
-                      <Typography variant="h6">{firstAppBookName} {String(data.firstAppChapter)}:{v.verseNumber}</Typography>{' '}
+                      <Typography variant="h6">{displayFirstAppBookName} {String(data.firstAppChapter)}:{v.verseNumber}</Typography>{' '}
                       {(() => {
                         // Buscar en v.keywords el primer objeto cuyo strongNumber coincida con currentStrongCode
                         let translated = null;
@@ -579,7 +591,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                           const found = v.keywords.find(k => k && (String(k.strongNumber) === String(currentStrongCode) || String(k.idWord) === String(currentStrongCode)));
                           if (found) translated = found.translatedWord || null;
                         }
-                        return renderHighlightedText(v.text, translated, 1);
+                        // Reemplazar '\\par' / '\par' por saltos de línea y respetar el white-space
+                        const verseText = replaceParWithNewline(v.text);
+                        return <div style={{ whiteSpace: 'pre-wrap' }}>{renderHighlightedText(verseText, translated, 1)}</div>;
                       })()}
                     </li>
                   ))}
@@ -638,13 +652,15 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
             {(pagedVerses || []).map((kv, i) => {
               const bookEntry = bookMapping.find((b) => b.id === kv.idBook);
               const bookName = bookEntry ? bookEntry.name : kv.idBook;
-              return (
-                <li key={i} style={{ marginBottom: 8 }}>
-                  <div style={{ fontWeight: 600 }}>{kv.translatedWord === "" ? "(Sin traducción)" : kv.translatedWord} — {kv.inflectionWord} {kv.transliteratedWord ? `(${kv.transliteratedWord})` : ''}</div>
-                  <div style={{ fontSize: '0.9em'}}>{bookName} {kv.chapter}:{kv.verseNumber} — {renderHighlightedText(kv.verseText, kv.translatedWord, kv.appearanceInVerse)}</div>
-                </li>
-              );
-            })}
+              // Si el strong actual es griego y el libro es del Antiguo Testamento (id <= 39), anteponer "LXX "
+              const displayBookName = (isGreek && kv.idBook != null && Number(kv.idBook) <= 39) ? `(LXX) ${bookName}` : bookName;
+               return (
+                 <li key={i} style={{ marginBottom: 8 }}>
+                   <div style={{ fontWeight: 600 }}>{kv.translatedWord === "" ? "(Sin traducción)" : kv.translatedWord} — {kv.inflectionWord} {kv.transliteratedWord ? `(${kv.transliteratedWord})` : ''}</div>
+                  <div style={{ fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>{displayBookName} {kv.chapter}:{kv.verseNumber} — {renderHighlightedText(replaceParWithNewline(kv.verseText), kv.translatedWord, kv.appearanceInVerse)}</div>
+                 </li>
+               );
+             })}
           </ul>
           {/* Controles de paginación */}
           {totalPages > 1 && (
