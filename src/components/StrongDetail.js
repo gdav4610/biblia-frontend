@@ -469,7 +469,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     <Box p={3}>
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <Typography variant="h4" gutterBottom data-testid="strong-title">
-            <span>{data.transliteration}</span> - {data.meaning}
+            <span>{data.transliteration}</span> - {data.inflection}
         </Typography>
         <div>
           {previousStack && previousStack.length > 0 ? (
@@ -489,7 +489,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                 size="small"
                 variant="text"
                 onClick={() => changeStrong(part)}
-                style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}
+                style={{ padding: '2px 5px', minWidth: 0, marginRight: 5, textTransform: 'none' }}
               >
                 {transliterationParts[idx]}
               </Button>
@@ -507,18 +507,31 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       </span>
     )}
       </Typography>
+
+      {/* Mostrar 'Primera aparición' si viene en la respuesta */}
+      {data && (data.firstAppBook !== undefined && data.firstAppBook !== null) && (
+        <Typography variant="body2" gutterBottom>
+          <strong>Primera aparición: </strong>
+          <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}>
+            {firstAppBookName} {String(data.firstAppChapter)}:{String(data.firstAppVerse)}
+          </Button>
+        </Typography>
+      )}
+
+
       <Typography variant="body2" gutterBottom>
-        <strong>{isGreek ? 'Griego: ' : 'Hebreo: '}</strong>{' '}
-        <span style={{ fontSize: '1.6em' }}>{data.inflection}</span>
+        <strong>Significado más común:</strong>{' '}
+        <span>{data.meaning}</span>
       </Typography>
+
       {strongParts && strongParts.length < 2 && (
         <Typography variant="body2" gutterBottom>
-          <strong>Origen: </strong>{' '}
+          <strong>Raíz: </strong>{isGreek ? 'del Griego ' : 'del Hebreo '}
           {data && typeof data.idParent === 'string' && data.idParent === "" ? (
             (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
-              <span>Verbo, raíz de todas las palabras en hebreo</span>
+              <span>Verbo, raíz de todas las palabras</span>
             ) : (
-              <span>{data.parentMeaning}</span>
+              <span><i>{data.parentMeaning}</i></span>
             )
           ) : data && data.idParent ? (
             <Button size="small" onClick={() => changeStrong(data.idParent)} style={{ textTransform: 'none' }}>
@@ -536,15 +549,6 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         </Typography>
       )}
 
-      {/* Mostrar 'Primera aparición' si viene en la respuesta */}
-      {data && (data.firstAppBook !== undefined && data.firstAppBook !== null) && (
-        <Typography variant="body2" gutterBottom>
-          <strong>Primera aparición: </strong>
-          <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}>
-            {firstAppBookName} {String(data.firstAppChapter)}:{String(data.firstAppVerse)}
-          </Button>
-        </Typography>
-      )}
 
       <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
         <Typography variant="body1" gutterBottom>

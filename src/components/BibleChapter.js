@@ -276,110 +276,118 @@ export default function BibleChapter({ book, chapter }) {
       <Box>
 
         {/* Mostrar top 4 keywords en la parte superior */}
-        {topKeywords && topKeywords.length > 0 && (
-          <Box mb={1}>
-            <strong>Top palabras:</strong>{' '}
-            {topKeywords.map((k) => {
-              const isActive = hoveredStrong === k.strongNumber;
-              const handleActivate = () => {
-                if (isActive) {
-                  // si ya está activo, simplemente quitar subrayado
-                  setHoveredStrong(null);
-                  return;
-                }
+        {topKeywords && topKeywords.length > 0 && (() => {
+            const filteredTopKeywords = topKeywords.filter(k => (k.count || 0) > 2);
+            if (!filteredTopKeywords.length) return null;
+            return (
+              <Box mb={1}>
+                <strong>Palabras top:</strong>{' '}
+                {filteredTopKeywords.map((k) => {
+                   const isActive = hoveredStrong === k.strongNumber;
+                   const handleActivate = () => {
+                     if (isActive) {
+                       // si ya está activo, simplemente quitar subrayado
+                       setHoveredStrong(null);
+                       return;
+                     }
 
-                // limpiar cualquier subrayado previo
-                setHoveredStrong(null);
-                // en el siguiente tick fijar el strong seleccionado
-                setTimeout(() => setHoveredStrong(k.strongNumber), 0);
-              };
+                     // limpiar cualquier subrayado previo
+                     setHoveredStrong(null);
+                     // en el siguiente tick fijar el strong seleccionado
+                     setTimeout(() => setHoveredStrong(k.strongNumber), 0);
+                   };
 
-              const handleKeyDown = (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleActivate();
-                }
-              };
+                   const handleKeyDown = (e) => {
+                     if (e.key === 'Enter' || e.key === ' ') {
+                       e.preventDefault();
+                       handleActivate();
+                     }
+                   };
 
-              return (
-                <span
-                  key={k.strongNumber}
-                  onClick={handleActivate}
-                  onKeyDown={handleKeyDown}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={isActive}
-                  style={{
-                    display: 'inline-block',
-                    marginRight: '0.6rem',
-                    padding: '0.18rem 0.45rem',
-                    background: isActive ? '#d19b64' : '#e3b88d',
-                    borderRadius: '12px',
-                    fontSize: '0.95rem',
-                    cursor: 'pointer',
-                    textDecoration: isActive ? 'underline' : 'none',
-                    outline: 'none'
-                  }}
-                >
-                  {k.sourceTransliteration || `Strong ${k.strongNumber}`} - {k.sourceMeaning} ({k.count})
-                </span>
-              );
-            })}
-          </Box>
-        )}
+                   return (
+                     <span
+                       key={k.strongNumber}
+                       onClick={handleActivate}
+                       onKeyDown={handleKeyDown}
+                       role="button"
+                       tabIndex={0}
+                       aria-pressed={isActive}
+                       style={{
+                         display: 'inline-block',
+                         marginRight: '0.6rem',
+                         padding: '0.18rem 0.45rem',
+                         background: isActive ? '#d19b64' : '#e3b88d',
+                         borderRadius: '12px',
+                         fontSize: '0.95rem',
+                         cursor: 'pointer',
+                         textDecoration: isActive ? 'underline' : 'none',
+                         outline: 'none'
+                       }}
+                     >
+                       {k.sourceTransliteration || `Strong ${k.strongNumber}`} - {k.sourceMeaning} ({k.count})
+                     </span>
+                   );
+                 })}
+               </Box>
+            );
+        })()}
 
-        {/* Mostrar top 4 keywords en la parte superior */}
-        {topCompoundKeywords && topCompoundKeywords.length > 0 && (
-          <Box mb={1}>
-            <strong>Top frases:</strong>{' '}
-            {topCompoundKeywords.map((k) => {
-              const isActive = hoveredStrong === k.strongNumber;
-              const handleActivate = () => {
-                if (isActive) {
-                  // si ya está activo, simplemente quitar subrayado
-                  setHoveredStrong(null);
-                  return;
-                }
+        {/* Mostrar top keywords en la parte superior */}
+        {topCompoundKeywords && topCompoundKeywords.length > 0 && (() => {
+            const filteredTopCompound = topCompoundKeywords.filter(k => (k.count || 0) > 2);
+            if (!filteredTopCompound.length) return null;
+            return (
+              <Box mb={1}>
+                <strong>Frases top:</strong>{' '}
+                {filteredTopCompound.map((k) => {
+                   const isActive = hoveredStrong === k.strongNumber;
+                   const handleActivate = () => {
+                     if (isActive) {
+                       // si ya está activo, simplemente quitar subrayado
+                       setHoveredStrong(null);
+                       return;
+                     }
 
-                // limpiar cualquier subrayado previo
-                setHoveredStrong(null);
-                // en el siguiente tick fijar el strong seleccionado
-                setTimeout(() => setHoveredStrong(k.strongNumber), 0);
-              };
+                     // limpiar cualquier subrayado previo
+                     setHoveredStrong(null);
+                     // en el siguiente tick fijar el strong seleccionado
+                     setTimeout(() => setHoveredStrong(k.strongNumber), 0);
+                   };
 
-              const handleKeyDown = (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleActivate();
-                }
-              };
+                   const handleKeyDown = (e) => {
+                     if (e.key === 'Enter' || e.key === ' ') {
+                       e.preventDefault();
+                       handleActivate();
+                     }
+                   };
 
-              return (
-                <span
-                  key={k.strongNumber}
-                  onClick={handleActivate}
-                  onKeyDown={handleKeyDown}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={isActive}
-                  style={{
-                    display: 'inline-block',
-                    marginRight: '0.6rem',
-                    padding: '0.18rem 0.45rem',
-                    background: isActive ? '#d19b64' : '#e3b88d',
-                    borderRadius: '12px',
-                    fontSize: '0.95rem',
-                    cursor: 'pointer',
-                    textDecoration: isActive ? 'underline' : 'none',
-                    outline: 'none'
-                  }}
-                >
-                  {k.compoundTransliteration || `Strong ${k.strongNumber}`} - {k.compoundMeaning} ({k.count})
-                </span>
-              );
-            })}
-          </Box>
-        )}
+                   return (
+                     <span
+                       key={k.strongNumber}
+                       onClick={handleActivate}
+                       onKeyDown={handleKeyDown}
+                       role="button"
+                       tabIndex={0}
+                       aria-pressed={isActive}
+                       style={{
+                         display: 'inline-block',
+                         marginRight: '0.6rem',
+                         padding: '0.18rem 0.45rem',
+                         background: isActive ? '#d19b64' : '#e3b88d',
+                         borderRadius: '12px',
+                         fontSize: '0.95rem',
+                         cursor: 'pointer',
+                         textDecoration: isActive ? 'underline' : 'none',
+                         outline: 'none'
+                       }}
+                     >
+                       {k.compoundTransliteration || `Strong ${k.strongNumber}`} - {k.compoundMeaning} ({k.count})
+                     </span>
+                   );
+                 })}
+               </Box>
+            );
+        })()}
 
 
 
