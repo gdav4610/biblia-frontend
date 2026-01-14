@@ -24,9 +24,25 @@ function App() {
 
 // Componente que obtiene el JSON del backend y pasa a BibleChapter
 function BibleChapterPage() {
-	
-  const [book, setBook] = useState("1"); //Genesis
-  const [chapter, setChapter] = useState(1);
+  // Inicializar book y chapter desde localStorage si ambos existen; si no, usar 1 y 1
+  const [book, setBook] = useState(() => {
+    try {
+      const sBook = localStorage.getItem("chapterSelector.bookId");
+      return sBook ? Number(sBook) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+
+  const [chapter, setChapter] = useState(() => {
+    try {
+      const sChapter = localStorage.getItem("chapterSelector.chapter");
+      return sChapter ? Number(sChapter) : 1;
+    } catch (e) {
+      return 1;
+    }
+  });
+
   const [darkMode, setDarkMode] = useState(() => {
     try {
       const s = localStorage.getItem("app.darkMode");
@@ -96,6 +112,5 @@ function BibleChapterPage() {
     </ThemeProvider>
   );
 }
-  
   
 export default App;
