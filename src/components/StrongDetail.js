@@ -123,7 +123,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   }, [includeLXX]);
 
   // Última palabra seleccionada para ver detalles (para recargar si toggle LXX cambia)
-  const [lastSelectedTranslatedWord, setLastSelectedTranslatedWord] = React.useState(null);
+  const [lastSelectedTransliteratedWord, setLastSelectedTransliteratedWord] = React.useState(null);
   // Flag para indicar que includeLXX fue toggled por el usuario y requiere recarga adicional
   const [includeLXXToggled, setIncludeLXXToggled] = React.useState(false);
 
@@ -157,7 +157,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const transliterationParts = data && data.transliteration && String(data.transliteration).includes(' ') ? String(data.transliteration).split(' ') : [(data && (data.transliteration || data.transliteration === 0)) ? data.transliteration : ''];
 
   // Etiqueta dinámica: 'Desglose:' sólo si no hay parts (length < 2), de lo contrario 'Strong:'
-  const displayLabel = (strongParts && strongParts.length < 2) ? 'Strong: ' : 'Desglose: ';
+  const displayLabel = (strongParts && strongParts.length < 2) ? 'Strong: ' : 'Composición: ';
+
+  const displayTitle = (strongParts && strongParts.length < 2) ? 'Lexema: ' : 'Frase: ';
 
   // añadir cerca de otras constantes derivadas de currentStrongCode
   const isGreek = currentStrongCode && String(currentStrongCode).startsWith('G');
@@ -207,7 +209,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     // Si se solicita incluir resultados de la Septuaginta (LXX), agregar el query param apropiado
     if (includeLXX) {
       const sep = url.includes('?') ? '&' : '?';
-      url = `${url}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+//      url = `${url}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+      url = `${url}${sep}includeLXX=${includeLXX ? 'false' : 'false'}`;
     }
 
     // Ejecutar fetch
@@ -244,7 +247,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     let statsUrl = `/api/strongs/${encodeURIComponent(currentStrongCode)}/stats`;
     try {
       const sep = statsUrl.includes('?') ? '&' : '?';
-      statsUrl = `${statsUrl}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+//      statsUrl = `${statsUrl}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
+      statsUrl = `${statsUrl}${sep}includeLXX=${includeLXX ? 'false' : 'false'}`;
     } catch (e) {
       // ignore
     }
@@ -261,8 +265,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           setData(json);
           // Si includeLXXToggled está activo, volver a cargar los detalles con la última palabra seleccionada
           if (includeLXXToggled) {
-            if (lastSelectedTranslatedWord) {
-              onCountClick(lastSelectedTranslatedWord);
+            if (lastSelectedTransliteratedWord) {
+              onCountClick(lastSelectedTransliteratedWord);
             }
             // independientemente de si había una palabra seleccionada, limpiar el flag para evitar recargas repetidas
             setIncludeLXXToggled(false);
@@ -285,20 +289,21 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     setPage(value);
   };
 
-  const onCountClick = (translatedWord) => {
+  const onCountClick = (transliteratedWord) => {
     if (!currentStrongCode) return;
     setDetailsLoading(true);
     setDetailsError(false);
     setDetailVerses(null);
-    setLastSelectedTranslatedWord(translatedWord); // Guardar la última palabra seleccionada
+    setLastSelectedTransliteratedWord(transliteratedWord); // Guardar la última palabra seleccionada
 
-    // Construir URL: incluir includeLXX y opcionalmente translatedWord (si no es null)
+    // Construir URL: incluir includeLXX y opcionalmente transliteratedWord (si no es null)
     let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
     const params = [];
-    if (translatedWord !== null && translatedWord !== undefined && translatedWord !== 'null') {
-      params.push(`translatedWord=${encodeURIComponent(translatedWord)}`);
+    if (transliteratedWord !== null && transliteratedWord !== undefined && transliteratedWord !== 'null') {
+      params.push(`transliteratedWord=${encodeURIComponent(transliteratedWord)}`);
     }
-    params.push(`includeLXX=${includeLXX ? 'true' : 'false'}`);
+//    params.push(`includeLXX=${includeLXX ? 'true' : 'false'}`);
+    params.push(`includeLXX=${includeLXX ? 'false' : 'false'}`);
     if (params.length > 0) url = `${url}?${params.join('&')}`;
 
     fetch(url)
@@ -318,6 +323,43 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       .catch(() => setDetailsError(true))
       .finally(() => setDetailsLoading(false));
   };
+
+
+  const onCountClickTranslated = (translatedWord) => {
+    if (!currentStrongCode) return;
+    setDetailsLoading(true);
+    setDetailsError(false);
+    setDetailVerses(null);
+    setLastSelectedTransliteratedWord(translatedWord); // Guardar la última palabra seleccionada
+
+    // Construir URL: incluir includeLXX y opcionalmente translatedWord (si no es null)
+    let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
+    const params = [];
+    if (translatedWord !== null && translatedWord !== undefined && translatedWord !== 'null') {
+      params.push(`translatedWord=${encodeURIComponent(translatedWord)}`);
+    }
+//    params.push(`includeLXX=${includeLXX ? 'true' : 'false'}`);
+    params.push(`includeLXX=${includeLXX ? 'false' : 'false'}`);
+    if (params.length > 0) url = `${url}?${params.join('&')}`;
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then((json) => {
+        // Se espera que el JSON contenga `keywordsWithVerse` (array)
+        if (json && Array.isArray(json.keywordsWithVerse)) {
+          setDetailVerses(json.keywordsWithVerse);
+          setView("details");
+        } else {
+          setDetailsError(true);
+        }
+      })
+      .catch(() => setDetailsError(true))
+      .finally(() => setDetailsLoading(false));
+  };
+
 
   const backToStats = () => {
     setView("stats");
@@ -469,7 +511,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     <Box p={3}>
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <Typography variant="h4" gutterBottom data-testid="strong-title">
-            <span>{data.transliteration}</span> - {data.inflection}
+            <span>{displayTitle} {data.transliteration}</span> ({data.inflection})
         </Typography>
         <div>
           {previousStack && previousStack.length > 0 ? (
@@ -520,16 +562,18 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
 
       <Typography variant="body2" gutterBottom>
-        <strong>Significado más común:</strong>{' '}
+        <strong>Significado usual:</strong>{' '}
         <span>{data.meaning}</span>
       </Typography>
 
+
+
       {strongParts && strongParts.length < 2 && (
         <Typography variant="body2" gutterBottom>
-          <strong>Raíz: </strong>{isGreek ? 'del Griego ' : 'del Hebreo '}
+          <strong>Raíz: </strong>{isGreek && !String(data.idParent).startsWith("H") ? 'Griego — ' : 'Hebreo — '}
           {data && typeof data.idParent === 'string' && data.idParent === "" ? (
             (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
-              <span>Verbo, raíz de todas las palabras</span>
+              <span>primaria</span>
             ) : (
               <span><i>{data.parentMeaning}</i></span>
             )
@@ -552,10 +596,12 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
       <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
         <Typography variant="body1" gutterBottom>
-          <strong>Apariciones en la Biblia:</strong>
+          <strong>Morfemas individuales en la Biblia:</strong>
         </Typography>
 
-        {/* Checkbox para incluir/excluir resultados de la Septuaginta (LXX) - solo para Strongs griegos */}
+
+        {/* Checkbox para incluir/excluir resultados
+
         {isGreek && (
           <FormControlLabel
             control={
@@ -570,6 +616,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
             style={{ marginLeft: 'auto', marginTop: 3 }}
           />
         )}
+de la Septuaginta (LXX) - solo para Strongs griegos */}
+
       </Box>
 
       {/* Vista del capítulo obtenido (reemplaza el contenido del modal) */}
@@ -593,7 +641,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                         let translated = null;
                         if (v && Array.isArray(v.keywords)) {
                           const found = v.keywords.find(k => k && (String(k.strongNumber) === String(currentStrongCode) || String(k.idWord) === String(currentStrongCode)));
-                          if (found) translated = found.translatedWord || null;
+                          if (found) translated = found.transliteratedWord || null;
                         }
                         // Reemplazar '\\par' / '\par' por saltos de línea y respetar el white-space
                         const verseText = replaceParWithNewline(v.text);
@@ -613,14 +661,78 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       )}
 
 
-      {/* Vista: estadísticas (lista original) */}
+      {/* Vista: estadísticas (Transliterated) */}
       {view === "stats" && (
         <ul>
           {(data.keywordStats || []).map((ex, idx) => (
             <li key={idx} style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 8 }}>{ex.transliteratedWord === "" ? "(Sin transliteración)" : ex.transliteratedWord}</span>
+              <button
+                onClick={() => onCountClick(ex.transliteratedWord)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0,
+                  fontSize: '0.95em'
+                }}
+                title={`Ver detalles para "${ex.transliteratedWord}"`}
+              >
+                {ex.count}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+
+      {/* Vista: estadísticas (Transliterated) */}
+      {view === "stats" &&    (strongParts && strongParts.length < 2) &&
+                              (data?.compoundRelatedList?.length > 0) && (
+        <span>
+        <p  style={{textIndent: 5 }}><strong>{data.transliteration}</strong> como parte de una frase importante:</p>
+        <ul>
+          {(data.compoundRelatedList || []).map((item, idx) => (
+            <li key={idx} style={{ marginBottom: 6 }}>
+              <Button
+                key={`strong-item-${idx}`}
+                size="small"
+                variant="text"
+                onClick={() => changeStrong(item.idWord)}
+                style={{ padding: '0px 5px', minWidth: 0, marginRight: 10, textTransform: 'none' }}
+              >
+                {item.transliteratedWord} - {item.meaning}
+              </Button>
+              </li>
+            ))}
+        </ul>
+        </span>
+      )}
+
+
+    <br />
+
+
+      {/* Vista: estadísticas (Translated) */}
+      {view === "stats" && (
+          <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
+            <Typography variant="body1" gutterBottom>
+              <strong>Traducciones en la Biblia:</strong>
+            </Typography>
+          </Box>
+      )}
+
+
+      {/* Vista: estadísticas (Translated) */}
+      {view === "stats" && (
+        <ul>
+          {(data.keywordStatsTranslated || []).map((ex, idx) => (
+            <li key={idx} style={{ marginBottom: 6 }}>
               <span style={{ marginRight: 8 }}>{ex.translatedWord === "" ? "(Sin traducción)" : ex.translatedWord}</span>
               <button
-                onClick={() => onCountClick(ex.translatedWord)}
+                onClick={() => onCountClickTranslated(ex.translatedWord)}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -638,6 +750,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           ))}
         </ul>
       )}
+
+
 
       {/* Vista: detalles (keywordsWithVerse) */}
       {view === "details" && (
@@ -660,7 +774,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
               const displayBookName = (isGreek && kv.idBook != null && Number(kv.idBook) <= 39) ? `(LXX) ${bookName}` : bookName;
                return (
                  <li key={i} style={{ marginBottom: 8 }}>
-                   <div style={{ fontWeight: 600 }}>{kv.translatedWord === "" ? "(Sin traducción)" : kv.translatedWord} — {kv.inflectionWord} {kv.transliteratedWord ? `(${kv.transliteratedWord})` : ''}</div>
+                   <div style={{ fontWeight: 600 }}>{kv.transliteratedWord === "" ? "(Sin transliteración)" : kv.transliteratedWord} ({kv.inflectionWord}) —  {kv.translatedWord ? `${kv.translatedWord}` : ''}</div>
                   <div style={{ fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>{displayBookName} {kv.chapter}:{kv.verseNumber} — {renderHighlightedText(replaceParWithNewline(kv.verseText), kv.translatedWord, kv.appearanceInVerse)}</div>
                  </li>
                );
@@ -674,6 +788,32 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           )}
         </Box>
       )}
+
+
+
+      {/* Vista: estadísticas (Transliterated) */}
+      {view === "stats" &&  (strongParts && strongParts.length >= 2) && (data?.compoundRelatedList?.length > 0) && (
+        <span>
+        <br />
+        <strong>Frases relacionadas:</strong>
+        <ul>
+          {(data.compoundRelatedList || []).map((item, idx) => (
+            <li key={idx} style={{ marginBottom: 6 }}>
+              <Button
+                key={`strong-item-${idx}`}
+                size="small"
+                variant="text"
+                onClick={() => changeStrong(item.idWord)}
+                style={{ padding: '0px 5px', minWidth: 0, marginRight: 10, textTransform: 'none' }}
+              >
+                {item.transliteratedWord} - {item.meaning}
+              </Button>
+              </li>
+            ))}
+        </ul>
+        </span>
+      )}
+
 
     </Box>
   );

@@ -87,6 +87,8 @@ export default function BibleChapter({ book, chapter }) {
         (v.keywords || []).forEach((k) => {
           const sn = (k.strongNumber || "").toString();
           if (!sn) return;
+          if (sn === "G5547 G2424") return;
+          if (sn === "G2424 G5547") return;
           // Solo contar si compoundTransliteration no es nulo/empty
           if (!k.compoundTransliteration) return;
           if (!counts[sn]) {
@@ -127,7 +129,7 @@ export default function BibleChapter({ book, chapter }) {
     return (
       <Box display="flex" flexDirection="column" alignItems="center" mt={3}>
         <CircularProgress color="primary" />
-        <p style={{ marginTop: "1rem" }}>Cargando {book} {chapter}...</p>
+        <p style={{ marginTop: "1rem" }}>Cargando capítulo...</p>
       </Box>
     );
 
@@ -189,7 +191,7 @@ export default function BibleChapter({ book, chapter }) {
             if (!str) return str;
             const last = str.charAt(str.length - 1);
             // quitar solo si el último carácter es uno de: punto, coma, dos puntos o punto y coma
-            return ".,:;?".includes(last) ? str.slice(0, -1) : str;
+            return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
           };
           const candidateClean = trimSpaces(candidate); // solo trim de espacios
           // aplicar la eliminación condicional del punto final y comparar exactamente
@@ -212,15 +214,15 @@ export default function BibleChapter({ book, chapter }) {
             <Tooltip
               key={`kw-${i}`}
               title={
-                <div style={{ fontSize: "1rem" }}>
-                   <span style={{ fontSize: "1.4em", marginTop: "0px"}}>{wordInfo.inflectionWord}</span> ({wordInfo.transliteratedWord ? <em>{wordInfo.transliteratedWord}</em> : null}) <br />
-                   forma de <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{inflectionDisplay}</span> ({transliterationDisplay ? <em>{transliterationDisplay}</em> : null}) <br />
+                <div style={{ fontSize: "0.9rem" }}>
+                   - Morfema: <span style={{ fontSize: "1.1em", marginTop: "0px"}}>{wordInfo.transliteratedWord}</span> ({wordInfo.inflectionWord ? <em>{wordInfo.inflectionWord}</em> : null}) <br />
+                   - Lexema: <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{transliterationDisplay}</span> ({inflectionDisplay ? <em>{inflectionDisplay}</em> : null}) <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
-                   {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
+                   - Significado usual: {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
                    <Button
                      onClick={() => openStrong(wordInfo)}
                      size="small"
-                     style={{ color: '#e0f2ff', textTransform: 'none', padding: 0, minWidth: 0 }}
+                     style={{ color: '#e0f2ff', textTransform: 'none', padding: 5, minWidth: 0 }}
                    >
                      Ver detalle (Strong {wordInfo.strongNumber})
                    </Button>
@@ -228,6 +230,7 @@ export default function BibleChapter({ book, chapter }) {
                }
                arrow
              >
+             <i>
               <span
                 data-strong={wordInfo.strongNumber}
                 data-llave={`strong-${wordInfo.strongNumber}`}
@@ -240,8 +243,9 @@ export default function BibleChapter({ book, chapter }) {
                   textDecoration: hoveredStrong === wordInfo.strongNumber ? "underline" : "none",
                 }}
               >
-                   {words.slice(i, i + keywordsLength).join(" ")}
+                   {wordInfo.transliteratedWord} | {words.slice(i, i + keywordsLength).join(" ")}
               </span>
+              </i>
             </Tooltip>
           );
 
@@ -281,7 +285,7 @@ export default function BibleChapter({ book, chapter }) {
             if (!filteredTopKeywords.length) return null;
             return (
               <Box mb={1}>
-                <strong>Palabras top:</strong>{' '}
+                <strong>Palabras clave:</strong>{' '}
                 {filteredTopKeywords.map((k) => {
                    const isActive = hoveredStrong === k.strongNumber;
                    const handleActivate = () => {
@@ -316,7 +320,7 @@ export default function BibleChapter({ book, chapter }) {
                          display: 'inline-block',
                          marginRight: '0.6rem',
                          padding: '0.18rem 0.45rem',
-                         background: isActive ? '#d19b64' : '#e3b88d',
+                         background: isActive ? '#c78c50' : '#dbb186',
                          borderRadius: '12px',
                          fontSize: '0.95rem',
                          cursor: 'pointer',
@@ -324,7 +328,7 @@ export default function BibleChapter({ book, chapter }) {
                          outline: 'none'
                        }}
                      >
-                       {k.sourceTransliteration || `Strong ${k.strongNumber}`} - {k.sourceMeaning} ({k.count})
+                       {k.sourceTransliteration || `Strong ${k.strongNumber}`} | {k.sourceMeaning} ({k.count})
                      </span>
                    );
                  })}
@@ -334,11 +338,11 @@ export default function BibleChapter({ book, chapter }) {
 
         {/* Mostrar top keywords en la parte superior */}
         {topCompoundKeywords && topCompoundKeywords.length > 0 && (() => {
-            const filteredTopCompound = topCompoundKeywords.filter(k => (k.count || 0) > 2);
+            const filteredTopCompound = topCompoundKeywords.filter(k => (k.count || 0) > 1);
             if (!filteredTopCompound.length) return null;
             return (
               <Box mb={1}>
-                <strong>Frases top:</strong>{' '}
+                <strong>Frases clave:</strong>{' '}
                 {filteredTopCompound.map((k) => {
                    const isActive = hoveredStrong === k.strongNumber;
                    const handleActivate = () => {
