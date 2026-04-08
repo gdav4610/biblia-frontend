@@ -163,6 +163,13 @@ export default function BibleChapter({ book, chapter }) {
 
     const words = verse.text.split(" ");
 
+    const trimSpaces = (s = "") => s.toString().trim();
+    const removeTrailingPunctuation = (str = "") => {
+      if (!str) return str;
+      const last = str.charAt(str.length - 1);
+      return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
+    };
+
     // Procesar texto: dividir y detectar frases
     const tokens = [];
     let i = 0;
@@ -177,26 +184,14 @@ export default function BibleChapter({ book, chapter }) {
           continue;
         }
 
-        // Intentar emparejar una frase clave (puede ser de varias palabras)
-        const nextFew = words.slice(i, i + 5).join(" "); // mirar hasta 5 palabras
-
-        const trimSpaces = (s = "") => s.toString().trim();
-
         // Intentar emparejar una palabra clave que traducida consiste de varias palabras
+        // eslint-disable-next-line 
         const matchKeyword = Object.keys(keywordMap).find((kw) => {
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
-          // Si el candidato termina en un signo de puntuación específico, quitar ese último carácter antes de comparar
-          const removeTrailingPunctuation = (str = "") => {
-            if (!str) return str;
-            const last = str.charAt(str.length - 1);
-            // quitar solo si el último carácter es uno de: punto, coma, dos puntos o punto y coma
-            return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
-          };
-          const candidateClean = trimSpaces(candidate); // solo trim de espacios
-          // aplicar la eliminación condicional del punto final y comparar exactamente
+          const candidateClean = trimSpaces(candidate);
           const candidateNoPunct = trimSpaces(removeTrailingPunctuation(candidateClean));
-          return candidateNoPunct === kw; // comparación exacta
+          return candidateNoPunct === kw;
         });
 
 
