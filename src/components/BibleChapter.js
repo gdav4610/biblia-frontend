@@ -229,6 +229,7 @@ export default function BibleChapter({ book, chapter }) {
               <span
                 data-strong={wordInfo.strongNumber}
                 data-llave={`strong-${wordInfo.strongNumber}`}
+                onClick={() => setHoveredStrong(wordInfo.strongNumber)}
                 onMouseEnter={() => setHoveredStrong(wordInfo.strongNumber)}
                 onMouseLeave={() => setHoveredStrong(null)}
                 style={{
