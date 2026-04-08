@@ -101,6 +101,10 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const [chapterData, setChapterData] = React.useState(null);
   const [chapterLoading, setChapterLoading] = React.useState(false);
   const [chapterError, setChapterError] = React.useState(false);
+  // Última palabra seleccionada para ver detalles (para recargar si toggle LXX cambia)
+//  const [lastSelectedTransliteratedWord, setLastSelectedTransliteratedWord] = React.useState(null);
+  const includeLXX = false;
+/*
   // Estado para incluir resultados de la Septuaginta (LXX). Persistido en localStorage.
   const [includeLXX, setIncludeLXX] = React.useState(() => {
     try {
@@ -112,6 +116,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     }
   });
 
+
   React.useEffect(() => {
     try {
       localStorage.setItem('strongDetail.includeLXX', includeLXX ? 'true' : 'false');
@@ -120,10 +125,26 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     }
   }, [includeLXX]);
 
-  // Última palabra seleccionada para ver detalles (para recargar si toggle LXX cambia)
-  const [lastSelectedTransliteratedWord, setLastSelectedTransliteratedWord] = React.useState(null);
   // Flag para indicar que includeLXX fue toggled por el usuario y requiere recarga adicional
   const [includeLXXToggled, setIncludeLXXToggled] = React.useState(false);
+
+  // Handler que limpia el modal y cambia includeLXX; la recarga la realiza el useEffect de stats
+  const handleIncludeLXXChange = (checked) => {
+    // limpiar vistas y datos del modal inmediatamente
+    setData(null);
+    setLoading(true);
+    setError(false);
+    setView('stats');
+    setDetailVerses(null);
+    setDetailsError(false);
+    setDetailsLoading(false);
+    setPage(1);
+    // marcar que se hizo toggle para que la useEffect dispare la recarga de detalles si aplica
+    setIncludeLXXToggled(true);
+    setIncludeLXX(checked);
+  };
+
+*/
 
 
   // Stack para recordar historial de strongs en el modal (para botón VOLVER)
@@ -188,14 +209,14 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     if (verse !== undefined && verse !== null && String(verse) !== 'null') {
       url += `?idVerse=${encodeURIComponent(String(verse))}`;
     }
-
+/*
     // Si se solicita incluir resultados de la Septuaginta (LXX), agregar el query param apropiado
     if (includeLXX) {
       const sep = url.includes('?') ? '&' : '?';
 //      url = `${url}${sep}includeLXX=${includeLXX ? 'true' : 'false'}`;
       url = `${url}${sep}includeLXX=${includeLXX ? 'false' : 'false'}`;
     }
-
+*/
     // Ejecutar fetch
     fetch(url)
       .then((res) => {
@@ -247,13 +268,13 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         } else {
           setData(json);
           // Si includeLXXToggled está activo, volver a cargar los detalles con la última palabra seleccionada
-          if (includeLXXToggled) {
+ /*         if (includeLXXToggled) {
             if (lastSelectedTransliteratedWord) {
               onCountClick(lastSelectedTransliteratedWord);
             }
             // independientemente de si había una palabra seleccionada, limpiar el flag para evitar recargas repetidas
             setIncludeLXXToggled(false);
-          }
+          }*/
         }
       })
       .catch(() => setError(true))
@@ -278,7 +299,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     setDetailsLoading(true);
     setDetailsError(false);
     setDetailVerses(null);
-    setLastSelectedTransliteratedWord(transliteratedWord); // Guardar la última palabra seleccionada
+//    setLastSelectedTransliteratedWord(transliteratedWord); // Guardar la última palabra seleccionada
 
     // Construir URL: incluir includeLXX y opcionalmente transliteratedWord (si no es null)
     let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
@@ -314,7 +335,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     setDetailsLoading(true);
     setDetailsError(false);
     setDetailVerses(null);
-    setLastSelectedTransliteratedWord(translatedWord); // Guardar la última palabra seleccionada
+//    setLastSelectedTransliteratedWord(translatedWord); // Guardar la última palabra seleccionada
 
     // Construir URL: incluir includeLXX y opcionalmente translatedWord (si no es null)
     let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
