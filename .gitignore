@@ -21,3 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# AWS - archivos locales de infraestructura (no subir al repo)
+iam-policy.json
+
