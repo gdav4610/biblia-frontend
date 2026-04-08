@@ -5,8 +5,6 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Pagination from '@mui/material/Pagination';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
 
 export default function StrongDetail({ strongCode = null, strongNumber: propStrongNumber = null, initialData = null, onClose = null }) {
   // 📜 Lista de libros con IDs numéricos
@@ -127,21 +125,6 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Flag para indicar que includeLXX fue toggled por el usuario y requiere recarga adicional
   const [includeLXXToggled, setIncludeLXXToggled] = React.useState(false);
 
-  // Handler que limpia el modal y cambia includeLXX; la recarga la realiza el useEffect de stats
-  const handleIncludeLXXChange = (checked) => {
-    // limpiar vistas y datos del modal inmediatamente
-    setData(null);
-    setLoading(true);
-    setError(false);
-    setView('stats');
-    setDetailVerses(null);
-    setDetailsError(false);
-    setDetailsLoading(false);
-    setPage(1);
-    // marcar que se hizo toggle para que la useEffect dispare la recarga de detalles si aplica
-    setIncludeLXXToggled(true);
-    setIncludeLXX(checked);
-  };
 
   // Stack para recordar historial de strongs en el modal (para botón VOLVER)
   const [previousStack, setPreviousStack] = React.useState([]);
@@ -275,6 +258,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStrongCode, includeLXX]);
 
   // Resetear la página cada vez que cambian los detailVerses
