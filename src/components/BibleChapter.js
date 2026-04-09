@@ -209,7 +209,7 @@ export default function BibleChapter({ book, chapter }) {
             <Tooltip
               key={`kw-${i}`}
               title={
-                <div style={{ fontSize: "0.9rem" }}>
+                <div style={{ fontSize: "1rem" }}>
                    - Morfema: <span style={{ fontSize: "1.1em", marginTop: "0px"}}>{wordInfo.transliteratedWord}</span> ({wordInfo.inflectionWord ? <em>{wordInfo.inflectionWord}</em> : null}) <br />
                    - Lexema: <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{transliterationDisplay}</span> ({inflectionDisplay ? <em>{inflectionDisplay}</em> : null}) <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
@@ -225,7 +225,6 @@ export default function BibleChapter({ book, chapter }) {
                }
                arrow
              >
-             <i>
               <span
                 data-strong={wordInfo.strongNumber}
                 data-llave={`strong-${wordInfo.strongNumber}`}
@@ -239,9 +238,13 @@ export default function BibleChapter({ book, chapter }) {
                   textDecoration: hoveredStrong === wordInfo.strongNumber ? "underline" : "none",
                 }}
               >
-                   {wordInfo.transliteratedWord} | {words.slice(i, i + keywordsLength).join(" ")}
+                   {words.slice(i, i + keywordsLength).join(" ")}
+                   {wordInfo.transliteratedWord ? (
+                     <i><sup style={{ fontSize: '0.80em', marginLeft: '0.1rem', verticalAlign: 'super', color: '#666' }}>
+                       {wordInfo.transliteratedWord}
+                     </sup></i>
+                   ) : null}
               </span>
-              </i>
             </Tooltip>
           );
 
@@ -263,7 +266,7 @@ export default function BibleChapter({ book, chapter }) {
         <div style={{ flex: '0 0 1rem', textAlign: 'right', paddingRight: '0.4rem', lineHeight: '1.6' }}>
           <strong>{verse.verseNumber}</strong>
         </div>
-        <div style={{ flex: '1 1 auto', lineHeight: '1.6' }}>
+        <div style={{ flex: '1 1 auto', lineHeight: '1.6', fontSize: '1.12rem' }}>
           {tokens}
         </div>
       </div>
@@ -318,13 +321,17 @@ export default function BibleChapter({ book, chapter }) {
                          padding: '0.18rem 0.45rem',
                          background: isActive ? '#c78c50' : '#dbb186',
                          borderRadius: '12px',
-                         fontSize: '0.95rem',
+                         fontSize: '1rem',
                          cursor: 'pointer',
                          textDecoration: isActive ? 'underline' : 'none',
                          outline: 'none'
                        }}
                      >
-                       {k.sourceTransliteration || `Strong ${k.strongNumber}`} | {k.sourceMeaning} ({k.count})
+                       {k.sourceMeaning} {k.sourceTransliteration ? (
+                            <i><sup style={{ fontSize: '0.80em', marginLeft: '0.05rem', verticalAlign: 'super', color: '#666' }}>
+                              {k.sourceTransliteration}
+                            </sup></i>
+                       ) : null} ({k.count})
                      </span>
                    );
                  })}
@@ -375,13 +382,17 @@ export default function BibleChapter({ book, chapter }) {
                          padding: '0.18rem 0.45rem',
                          background: isActive ? '#d19b64' : '#e3b88d',
                          borderRadius: '12px',
-                         fontSize: '0.95rem',
+                         fontSize: '1rem',
                          cursor: 'pointer',
                          textDecoration: isActive ? 'underline' : 'none',
                          outline: 'none'
                        }}
                      >
-                       {k.compoundTransliteration || `Strong ${k.strongNumber}`} - {k.compoundMeaning} ({k.count})
+                       {k.compoundMeaning} {k.compoundTransliteration ? (
+                                                   <i><sup style={{ fontSize: '0.80em', marginLeft: '0.05rem', verticalAlign: 'super', color: '#666' }}>
+                                                     {k.compoundTransliteration}
+                                                   </sup></i>
+                                              ) : null} ({k.count})
                      </span>
                    );
                  })}
