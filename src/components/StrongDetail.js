@@ -599,31 +599,6 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       )}
 
 
-      <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
-        <Typography variant="body1" gutterBottom>
-          <strong>Morfemas individuales en la Biblia:</strong>
-        </Typography>
-
-
-        {/* Checkbox para incluir/excluir resultados
-
-        {isGreek && (
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={includeLXX}
-                onChange={(e) => handleIncludeLXXChange(e.target.checked)}
-                color="primary"
-                size="small"
-              />
-            }
-            label="Incluir resultados de la Septuaginta (LXX)"
-            style={{ marginLeft: 'auto', marginTop: 3 }}
-          />
-        )}
-de la Septuaginta (LXX) - solo para Strongs griegos */}
-
-      </Box>
 
       {/* Vista del capítulo obtenido (reemplaza el contenido del modal) */}
       {view === 'chapter' && (
@@ -667,33 +642,6 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
 
 
       {/* Vista: estadísticas (Transliterated) */}
-      {view === "stats" && (
-        <ul>
-          {(data.keywordStats || []).map((ex, idx) => (
-            <li key={idx} style={{ marginBottom: 6 }}>
-              <span style={{ marginRight: 8 }}>{ex.transliteratedWord === "" ? "(Sin transliteración)" : ex.transliteratedWord}</span>
-              <button
-                onClick={() => onCountClick(ex.transliteratedWord)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#1976d2',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  padding: 0,
-                  fontSize: '0.95em'
-                }}
-                title={`Ver detalles para "${ex.transliteratedWord}"`}
-              >
-                {ex.count}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-
-      {/* Vista: estadísticas (Transliterated) */}
       {view === "stats" &&    (strongParts && strongParts.length < 2) &&
                               (data?.compoundRelatedList?.length > 0) && (
         <span>
@@ -717,14 +665,14 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
       )}
 
 
-    <br />
-
+        <br />
+      <hr style={{ color: "#eee", height: "1px" }}/>
 
       {/* Vista: estadísticas (Translated) */}
       {view === "stats" && (
           <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
             <Typography variant="body1" gutterBottom>
-              <strong>Traducciones en la Biblia:</strong>
+              <strong>Traducido en la Biblia como:</strong>
             </Typography>
           </Box>
       )}
@@ -755,6 +703,64 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
           ))}
         </ul>
       )}
+
+
+      {/* Vista: estadísticas (Transliterated) */}
+      {view === "stats" && (
+      <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
+        <Typography variant="body1" gutterBottom>
+          <strong>Morfemas en la Biblia:</strong>
+        </Typography>
+
+
+        {/* Checkbox para incluir/excluir resultados
+
+        {isGreek && (
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={includeLXX}
+                onChange={(e) => handleIncludeLXXChange(e.target.checked)}
+                color="primary"
+                size="small"
+              />
+            }
+            label="Incluir resultados de la Septuaginta (LXX)"
+            style={{ marginLeft: 'auto', marginTop: 3 }}
+          />
+        )}
+de la Septuaginta (LXX) - solo para Strongs griegos */}
+
+      </Box>
+      )}
+
+
+      {/* Vista: estadísticas (Transliterated) */}
+      {view === "stats" && (
+        <ul>
+          {(data.keywordStats || []).map((ex, idx) => (
+            <li key={idx} style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 8 }}>{ex.transliteratedWord === "" ? "(Sin transliteración)" : ex.transliteratedWord}</span>
+              <button
+                onClick={() => onCountClick(ex.transliteratedWord)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0,
+                  fontSize: '0.95em'
+                }}
+                title={`Ver detalles para "${ex.transliteratedWord}"`}
+              >
+                {ex.count}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
 
 
 
