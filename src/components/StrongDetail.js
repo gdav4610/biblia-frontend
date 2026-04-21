@@ -5,6 +5,7 @@ import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Pagination from '@mui/material/Pagination';
+import apiFetch from "../utils/apiFetch";
 
 export default function StrongDetail({ strongCode = null, strongNumber: propStrongNumber = null, initialData = null, onClose = null }) {
   // 📜 Lista de libros con IDs numéricos
@@ -217,8 +218,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       url = `${url}${sep}includeLXX=${includeLXX ? 'false' : 'false'}`;
     }
 */
-    // Ejecutar fetch
-    fetch(url)
+    apiFetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -257,7 +257,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       // ignore
     }
 
-    fetch(statsUrl)
+    apiFetch(statsUrl)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -311,7 +311,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     params.push(`includeLXX=${includeLXX ? 'false' : 'false'}`);
     if (params.length > 0) url = `${url}?${params.join('&')}`;
 
-    fetch(url)
+    apiFetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -347,7 +347,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
     params.push(`includeLXX=${includeLXX ? 'false' : 'false'}`);
     if (params.length > 0) url = `${url}?${params.join('&')}`;
 
-    fetch(url)
+    apiFetch(url)
       .then((res) => {
         if (!res.ok) throw new Error('Network response was not ok');
         return res.json();
@@ -485,7 +485,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Reemplaza apariciones de "\\par" o "\par" por saltos de línea '\n'
   const replaceParWithNewline = (text) => {
     if (!text || typeof text !== 'string') return text;
-    // Primero reemplazar '\\par' (doble barra) luego '\par' (simple)
+    // Primero reemplazar '\\\\par' (doble barra) luego '\\par' (simple)
     return text.replace(/\\\\par/g, '\n').replace(/\\par/g, '\n');
   }
 

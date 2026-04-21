@@ -10,6 +10,7 @@ import DialogContent from "@mui/material/DialogContent";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import StrongDetail from "./StrongDetail";
+import apiFetch from "../utils/apiFetch";
 
 export default function BibleChapter({ book, chapter }) {
   const [data, setData] = useState(null);
@@ -26,7 +27,7 @@ export default function BibleChapter({ book, chapter }) {
     setError(null);
     setData(null);
 
-    fetch(`/api/bible/chapter/${book}/${chapter}`)
+    apiFetch(`/api/bible/chapter/${book}/${chapter}`)
       .then((res) => {
         if (!res.ok) throw new Error("No se pudo cargar el capítulo");
         return res.json();
