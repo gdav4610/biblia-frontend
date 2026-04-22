@@ -162,6 +162,26 @@ export default function BibleChapter({ book, chapter }) {
         })
     );
 
+    // indice por primera palabra para evitar chequear todas las keywords en cada posición
+    const firstWordMap = {};
+    const keywordKeys = Object.keys(keywordMap);
+    const trimSpacesLocal = (s = "") => s.toString().trim();
+    const removeTrailingPunctuationLocal = (str = "") => {
+      if (!str) return str;
+      const last = str.charAt(str.length - 1);
+      return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
+    };
+
+    keywordKeys.forEach((kw) => {
+      const first = trimSpacesLocal(removeTrailingPunctuationLocal(kw.split(" ")[0] || "")).toString();
+      if (!first) return;
+      if (!firstWordMap[first]) firstWordMap[first] = [];
+      firstWordMap[first].push(kw);
+    });
+
+    // Set para recordar keywords que ya hicieron match en este verso (no volver a evaluarlas)
+    const usedKeywords = new Set();
+
     const words = verse.text.split(" ");
 
     const trimSpaces = (s = "") => s.toString().trim();
@@ -186,8 +206,14 @@ export default function BibleChapter({ book, chapter }) {
         }
 
         // Intentar emparejar una palabra clave que traducida consiste de varias palabras
-        // eslint-disable-next-line 
-        const matchKeyword = Object.keys(keywordMap).find((kw) => {
+        // Primero obtener las keywords cuya primera palabra coincide con la palabra actual
+        const candidateFirst = trimSpaces(removeTrailingPunctuation(words[i] || ""));
+        const possibleKeys = firstWordMap[candidateFirst] || [];
+
+        // Buscar entre las posibles y omitir las ya usadas
+        // eslint-disable-next-line
+        const matchKeyword = possibleKeys.find((kw) => {
+          if (usedKeywords.has(kw)) return false;
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
           const candidateClean = trimSpaces(candidate);
@@ -195,8 +221,10 @@ export default function BibleChapter({ book, chapter }) {
           return candidateNoPunct === kw;
         });
 
-
         if (matchKeyword) {  //palabras clave que traducidas son varias palabras
+
+          // Marcar esta keyword como usada para no evaluarla de nuevo
+          usedKeywords.add(matchKeyword);
 
           const wordInfo = keywordMap[matchKeyword];
           const keywordsLength = matchKeyword.split(" ").length;
