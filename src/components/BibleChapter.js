@@ -169,7 +169,7 @@ export default function BibleChapter({ book, chapter }) {
     const removeTrailingPunctuationLocal = (str = "") => {
       if (!str) return str;
       const last = str.charAt(str.length - 1);
-      return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
+      return ",.:;!?".includes(last) ? str.slice(0, -1) : str;
     };
 
     keywordKeys.forEach((kw) => {
@@ -188,7 +188,7 @@ export default function BibleChapter({ book, chapter }) {
     const removeTrailingPunctuation = (str = "") => {
       if (!str) return str;
       const last = str.charAt(str.length - 1);
-      return ".,:;!?".includes(last) ? str.slice(0, -1) : str;
+      return ",.:;!?".includes(last) ? str.slice(0, -1) : str;
     };
 
     // Procesar texto: dividir y detectar frases
@@ -210,21 +210,39 @@ export default function BibleChapter({ book, chapter }) {
         const candidateFirst = trimSpaces(removeTrailingPunctuation(words[i] || ""));
         const possibleKeys = firstWordMap[candidateFirst] || [];
 
-        // Buscar entre las posibles y omitir las ya usadas
-        // eslint-disable-next-line
-        const matchKeyword = possibleKeys.find((kw) => {
-          if (usedKeywords.has(kw)) return false;
+        // Optimización: filtrar las posibles keys para excluir las ya usadas antes de evaluar
+        const possibleUnseenKeys = possibleKeys.filter(k => !usedKeywords.has(k));
+
+        // Buscar entre las posibles no usadas y detenerse en el primer match (evita evaluar repetidamente las mismas kw)
+        let matchKeyword = null;
+        for (let pkIdx = 0; pkIdx < possibleUnseenKeys.length; pkIdx++) {
+          const kw = possibleUnseenKeys[pkIdx];
           const kwLen = kw.split(" ").length;
           const candidate = words.slice(i, i + kwLen).join(" ");
           const candidateClean = trimSpaces(candidate);
           const candidateNoPunct = trimSpaces(removeTrailingPunctuation(candidateClean));
-          return candidateNoPunct === kw;
-        });
+          if (candidateNoPunct === kw) {
+            matchKeyword = kw;
+            break;
+          }
+        }
 
         if (matchKeyword) {  //palabras clave que traducidas son varias palabras
 
           // Marcar esta keyword como usada para no evaluarla de nuevo
           usedKeywords.add(matchKeyword);
+
+          // Además, removerla del índice `firstWordMap` para no volver a iterar sobre ella
+          try {
+            const first = trimSpaces(removeTrailingPunctuation((matchKeyword || "").split(" ")[0] || ""));
+            const arr = firstWordMap[first];
+            if (arr && arr.length) {
+              const idx = arr.indexOf(matchKeyword);
+              if (idx !== -1) arr.splice(idx, 1);
+            }
+          } catch (e) {
+            // safe guard: si algo falla, no rompe el rendering
+          }
 
           const wordInfo = keywordMap[matchKeyword];
           const keywordsLength = matchKeyword.split(" ").length;
@@ -269,9 +287,9 @@ export default function BibleChapter({ book, chapter }) {
               >
                    {words.slice(i, i + keywordsLength).join(" ")}
                    {wordInfo.transliteratedWord ? (
-                     <i><sup style={{ fontSize: '0.80em', marginLeft: '0.1rem', verticalAlign: 'super', color: '#666' }}>
+                     <sup style={{ fontSize: '0.85em', marginLeft: '0.1rem', verticalAlign: 'super', color: '#888' }}>
                        {wordInfo.transliteratedWord}
-                     </sup></i>
+                     </sup>
                    ) : null}
               </span>
             </Tooltip>

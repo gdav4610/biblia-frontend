@@ -1,4 +1,11 @@
 import React, { useState, useEffect } from "react";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+import Button from "@mui/material/Button";
+import apiFetch from "../utils/apiFetch";
 
 export default function ChapterSelector({ onSelect }) {
   const [bookId, setBookId] = useState(() => {
@@ -18,6 +25,15 @@ export default function ChapterSelector({ onSelect }) {
       return 1;
     }
   });
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  // Paginación para resultados de búsqueda
+  const [searchPage, setSearchPage] = useState(0);
+  const pageSize = 5; // mostrar 5 versículos por página
 
   // 📜 Lista de libros con IDs numéricos
   const oldTestament = [
@@ -137,73 +153,352 @@ export default function ChapterSelector({ onSelect }) {
     setChapter(newChapter);
   };
 
+  // Búsqueda: llama al endpoint y abre modal con resultados
+  const handleSearch = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const q = (searchQuery || "").trim();
+    if (!q) return;
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchResults(null);
+
+    // --- Real request to backend using apiFetch ---
+    try {
+      const encoded = encodeURIComponent(q);
+      // Asumimos un endpoint REST en /api/bible/search?q=... que devuelve { verses: [...] }
+      const url = `/api/bible/search?q=${encoded}`;
+      const resp = await apiFetch(url, { method: 'GET' });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => null);
+        throw new Error(`Error ${resp.status}${text ? `: ${text}` : ''}`);
+      }
+
+      const json = await resp.json().catch(() => null);
+
+      // Normalizar la estructura esperada: preferimos json.verses o json
+      const source = (json && (Array.isArray(json.verses) ? json.verses : (Array.isArray(json) ? json : (json && json.results) ? json.results : []))) || [];
+
+      // Normalizar/flatten por si la respuesta tiene objetos de verso anidados dentro de `keywords`
+      const normalizeVerses = (input) => {
+        const out = [];
+        const walk = (item) => {
+          if (!item) return;
+          // Si parece un verso (contiene text y verseNumber)
+          if (item.text && (typeof item.verseNumber === 'number' || typeof item.verseNumber === 'string')) {
+            // Filtrar keywords que sean verdaderos keywords (no versos anidados)
+            const kws = Array.isArray(item.keywords)
+              ? item.keywords.filter(k => !(k && (k.text || k.verseNumber)))
+              : [];
+            out.push({ ...item, keywords: kws });
+            // Si en keywords hay objetos que en realidad son versos, recorrerlos también
+            if (Array.isArray(item.keywords)) {
+              item.keywords.forEach(k => {
+                if (k && (k.text || k.verseNumber)) walk(k);
+              });
+            }
+            return;
+          }
+
+          // Si es un array, recorrerlo
+          if (Array.isArray(item)) {
+            item.forEach(walk);
+            return;
+          }
+
+          // Si es un objeto con 'verses' o 'keywords', recorrerlos
+          if (item && typeof item === 'object') {
+            if (Array.isArray(item.verses)) walk(item.verses);
+            if (Array.isArray(item.keywords)) walk(item.keywords);
+          }
+        };
+
+        walk(input);
+        return out;
+      };
+
+      const normalized = normalizeVerses(source || []);
+      setSearchResults(normalized);
+      setSearchPage(0); // resetear paginación al recibir nuevos resultados
+      setIsSearchModalOpen(true);
+    } catch (err) {
+      setSearchError(String(err));
+      setIsSearchModalOpen(true);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Cerrar modal con Esc
+  useEffect(() => {
+    const onKey = (ev) => {
+      if (ev.key === "Escape" && isSearchModalOpen) setIsSearchModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isSearchModalOpen]);
+
+  // Helper to escape regex special chars y para resaltar coincidencias (palabras completas)
+  const escapeRegExp = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // Resalta cualquiera de las translatedWords proporcionadas (coincidencias de palabra completa)
+  const highlightMatchesMultiple = (text = "", translatedWords = []) => {
+    if (!text) return text;
+    const phrases = (Array.isArray(translatedWords) ? translatedWords : [])
+      .map(p => (p || '').toString().trim())
+      .filter(Boolean);
+
+    // Si no hay phrases, usar el término de búsqueda como fallback para resaltar
+    if (phrases.length === 0) {
+      const fallback = (searchQuery || '').toString().trim();
+      if (!fallback) return text;
+
+      const escapedFallback = escapeRegExp(fallback);
+      const regexFallback = new RegExp(`\\b(${escapedFallback})\\b`, 'gi');
+      const partsFallback = text.split(regexFallback);
+      return partsFallback.map((part, idx) => {
+        if (part && part.toLowerCase() === fallback.toLowerCase()) {
+          return (
+            <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
+              {part}
+            </span>
+          );
+        }
+        return part;
+      });
+    }
+
+    // Eliminar duplicados y ordenar por longitud descendente para evitar solapamientos
+    const unique = Array.from(new Set(phrases.map(p => p.toLowerCase()))).sort((a,b) => b.length - a.length);
+    const escaped = unique.map(escapeRegExp);
+    const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+    const parts = text.split(regex);
+    return parts.map((part, idx) => {
+      if (part && unique.includes(part.toLowerCase())) {
+        return (
+          <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  // Helper: obtiene bookId por nombre (case-insensitive)
+  const getBookIdByName = (name) => {
+    if (!name) return null;
+    const lower = name.toString().toLowerCase();
+    const fromOld = oldTestament.find(b => b.name.toString().toLowerCase() === lower);
+    if (fromOld) return fromOld.id;
+    const fromNew = newTestament.find(b => b.name.toString().toLowerCase() === lower);
+    if (fromNew) return fromNew.id;
+    return null;
+  };
+
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "1rem",
-        alignItems: "center",
-        marginBottom: "1.5rem",
-      }}
-    >
-      <label>
-        Libro:
-        <select
-          value={bookId}
-          onChange={(e) => setBookId(Number(e.target.value))}
-          style={{ marginLeft: "0.5rem", minWidth: "180px" }}
-        >
-          <optgroup label="Antiguo Testamento">
-            {oldTestament.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </optgroup>
-
-          <optgroup label="Nuevo Testamento">
-            {newTestament.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-      </label>
-
-      <label>
-        Capítulo:
-        {/* reemplazamos el input por un select dinámico basado en el libro seleccionado */}
-        <select
-          value={chapter}
-          onChange={(e) => {
-            const newChapter = Number(e.target.value);
-            setChapter(newChapter);
-          }}
-          style={{ marginLeft: "0.5rem", width: "80px" }}
-        >
-          {(() => {
-            const book = getBookById(bookId);
-            const max = book ? book.capitulos : 1;
-            return Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ));
-          })()}
-        </select>
-      </label>
-
-      <div style={{ display: "flex", gap: "0.5rem" }}>
-        <button type="button" onClick={handlePrev} disabled={chapter <= 1}>
-          ⬅️ Anterior
+    <>
+      {/* Buscador de palabras */}
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+        <input
+          type="text"
+          placeholder="Buscar palabras en toda la Biblia (ej: En el principio)"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ flex: 1, padding: '0.5rem' }}
+        />
+        <button type="submit" disabled={searchLoading} style={{ padding: '0.5rem 1rem' }}>
+          {searchLoading ? 'Buscando...' : 'Buscar'}
         </button>
-        <button type="button" onClick={handleNext}>
-          Siguiente ➡️
-        </button>
-      </div>
-    </form>
+      </form>
+
+      {/* Modal de resultados usando MUI Dialog (visualmente igual al modal StrongDetail) */}
+      <Dialog
+        open={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        fullWidth
+        maxWidth="md"
+        aria-labelledby="search-dialog-title"
+      >
+        <DialogTitle id="search-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Resultados de búsqueda
+          <IconButton onClick={() => setIsSearchModalOpen(false)} size="small" aria-label="Cerrar">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {searchError && <div style={{ color: 'red' }}>Error: {searchError}</div>}
+
+          {!searchError && searchResults && searchResults.length === 0 && (
+            <div>No se encontraron resultados para: {searchQuery}</div>
+          )}
+
+          {!searchError && !searchResults && <div>Sin resultados.</div>}
+
+          {!searchError && searchResults && searchResults.length > 0 && (
+            <div>
+              {(() => {
+                const total = (searchResults || []).length;
+                const totalPages = Math.max(1, Math.ceil(total / pageSize));
+                const start = searchPage * pageSize;
+                const end = Math.min(start + pageSize, total);
+                const pageItems = (searchResults || []).slice(start, end);
+
+                return (
+                  <div>
+
+                    {pageItems.map((r, idx) => {
+                      // Resolver ID del libro: preferimos el campo numérico `idBook` en la respuesta
+                      // Si `idBook` existe y es numérico (o string numérico), lo usamos; si no, cae a resolver por nombre.
+                      const bookIdFromResponse = (r && (typeof r.idBook === 'number'
+                        ? r.idBook
+                        : (typeof r.idBook === 'string' && /^[0-9]+$/.test(r.idBook) ? Number(r.idBook) : null)));
+
+                      const bookIdResolved = bookIdFromResponse != null ? bookIdFromResponse : getBookIdByName(r.book);
+
+                      const bookInfo = getBookById(bookIdResolved) || { name: r.book || (bookIdFromResponse != null ? `Libro ${r.idBook}` : `Libro`) };
+
+                      const translatedWords = Array.isArray(r.keywords) ? r.keywords.map(k => k.translatedWord).filter(Boolean) : [];
+                      const inflections = Array.isArray(r.keywords) ? r.keywords.map(k => k.inflectionWord).filter(Boolean).join(', ') : '';
+                      const translits = Array.isArray(r.keywords) ? r.keywords.map(k => k.transliteratedWord).filter(Boolean).join(', ') : '';
+
+                      return (
+                        <div key={`${r.book}-${r.chapter}-${r.verseNumber}-${start + idx}`} style={{ padding: '0.8rem', borderBottom: '1px solid #aaa', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.85rem' }}>
+                              {bookInfo.name} {r.chapter}:{r.verseNumber}
+                            </div>
+
+                            <div style={{ fontSize: '0.9rem' , marginTop: '0.25rem'}}>
+                              <strong>{inflections || '-'} </strong> {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
+                            </div>
+
+                            <div style={{ marginTop: '0.5rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
+                          </div>
+                          <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => {
+                                try {
+                                  setIsSearchModalOpen(false);
+                                  const targetBookId = bookIdResolved || bookId; // si no se resuelve, usar bookId actual
+                                  onSelect(targetBookId, r.chapter);
+                                } catch (e) {
+                                  // ignore
+                                }
+                              }}
+                            >
+                              Ir
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Controles de paginación */}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.8rem' }}>
+
+                      <div style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: '#666' }}>
+                          Mostrando {start + 1} - {end} de {total}
+                      </div>
+                      <div>
+                        <Button
+                          size="small"
+                          onClick={() => setSearchPage((p) => Math.max(0, p - 1))}
+                          disabled={searchPage <= 0}
+                        >
+                          Anterior
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={() => setSearchPage((p) => Math.min(totalPages - 1, p + 1))}
+                          disabled={searchPage >= totalPages - 1}
+                          style={{ marginLeft: '0.5rem' }}
+                        >
+                          Siguiente
+                        </Button>
+                      </div>
+
+                      <div style={{ fontSize: '0.8rem', color: '#666' }}>Página {searchPage + 1} de {totalPages}</div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "1rem",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <label>
+          Libro:
+          <select
+            value={bookId}
+            onChange={(e) => setBookId(Number(e.target.value))}
+            style={{ marginLeft: "0.5rem", minWidth: "180px" }}
+          >
+            <optgroup label="Antiguo Testamento">
+              {oldTestament.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </optgroup>
+
+            <optgroup label="Nuevo Testamento">
+              {newTestament.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+
+        <label>
+          Capítulo:
+          {/* reemplazamos el input por un select dinámico basado en el libro seleccionado */}
+          <select
+            value={chapter}
+            onChange={(e) => {
+              const newChapter = Number(e.target.value);
+              setChapter(newChapter);
+            }}
+            style={{ marginLeft: "0.5rem", width: "80px" }}
+          >
+            {(() => {
+              const book = getBookById(bookId);
+              const max = book ? book.capitulos : 1;
+              return Array.from({ length: max }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ));
+            })()}
+          </select>
+        </label>
+
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button type="button" onClick={handlePrev} disabled={chapter <= 1}>
+            ⬅️ Anterior
+          </button>
+          <button type="button" onClick={handleNext}>
+            Siguiente ➡️
+          </button>
+        </div>
+      </form>
+    </>
   );
 }
