@@ -493,9 +493,6 @@ export default function ChapterSelector({ onSelect }) {
                               {bookInfo.name} {r.chapter}:{r.verseNumber}
                             </div>
 
-                            <div style={{ fontSize: '1rem' , marginTop: '0.25rem'}}>
-                              {inflections || ''} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
-                            </div>
 
                             <div style={{ marginTop: '0.2rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, keywordsForHighlight)}</div>
                           </div>
