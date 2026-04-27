@@ -297,11 +297,31 @@ export default function ChapterSelector({ onSelect }) {
   };
 
   // Resalta cualquiera de las translatedWords proporcionadas (coincidencias de palabra completa)
-  const highlightMatchesMultiple = (text = "", translatedWords = []) => {
+  const highlightMatchesMultiple = (text = "", keywords = []) => {
     if (!text) return text;
-    const phrases = (Array.isArray(translatedWords) ? translatedWords : [])
+    // keywords: array de objetos { translatedWord, transliteratedWord }
+    const phrases = (Array.isArray(keywords) ? keywords.map(k => (k && k.translatedWord) ? k.translatedWord : '') : [])
       .map(p => (p || '').toString().trim())
       .filter(Boolean);
+
+    // Normalización y mapa de transliteraciones
+    const stripAccents = (s = '') =>
+      s
+        .toString()
+        .normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+
+    const translitMap = {};
+    if (Array.isArray(keywords)) {
+      for (const k of keywords) {
+        if (!k || !k.translatedWord) continue;
+        const key = stripAccents(k.translatedWord).toLowerCase().trim();
+        if (!translitMap[key]) translitMap[key] = k.transliteratedWord || '';
+      }
+    }
+
+    // Normalizar término de búsqueda para comparación (puede ser distinto a las keywords)
+    const searchTerm = (searchQuery || '').toString().trim();
+    const searchNorm = stripAccents(searchTerm).toLowerCase().trim();
 
     // Helper para construir nodos a partir de un regex con captura del match completo
     const nodesFromRegex = (regex, matchGroupIndexForWord) => {
@@ -321,10 +341,21 @@ export default function ChapterSelector({ onSelect }) {
         if (wordStart > lastIndex) {
           nodes.push(text.slice(lastIndex, wordStart));
         }
-        // push palabra resaltada
+        // Determinar transliteración (buscando por la palabra encontrada, normalizada)
+        const matchedText = text.slice(wordStart, wordStart + word.length);
+        const keyNorm = stripAccents(matchedText).toLowerCase().trim();
+        const translit = translitMap[keyNorm];
+
+        // Determinar si esta coincidencia corresponde exactamente al término de búsqueda
+        const isSearchMatch = searchNorm && keyNorm === searchNorm;
+
+        // push palabra resaltada; solo el término de búsqueda llevará color rojo
         nodes.push(
-          <span key={`h-${counter++}-${wordStart}`} style={{ color: 'red', fontWeight: 700 }}>
-            {text.slice(wordStart, wordStart + word.length)}
+          <span key={`h-${counter++}-${wordStart}`} style={{ color: isSearchMatch ? 'red' : undefined, fontWeight: 700 }}>
+            {matchedText}
+            {translit ? (
+              <sup style={{ fontSize: '0.8em', marginLeft: '0.25rem', fontWeight: 400 }}>{translit}</sup>
+            ) : null}
           </span>
         );
         lastIndex = wordStart + word.length;
@@ -337,7 +368,7 @@ export default function ChapterSelector({ onSelect }) {
 
     // Si no hay phrases, usar el término de búsqueda como fallback para resaltar (coincidencias parciales)
     if (phrases.length === 0) {
-      const fallback = (searchQuery || '').toString().trim();
+      const fallback = searchTerm;
       if (!fallback) return text;
 
       const pattern = buildAccentInsensitivePattern(fallback);
@@ -353,9 +384,12 @@ export default function ChapterSelector({ onSelect }) {
       }
     }
 
-    // Cuando hay translatedWords: queremos coincidencias completas, pero sin distinguir acentos.
+    // Cuando hay translatedWords: queremos detectar tanto las keywords como el término de búsqueda,
+    // pero únicamente el término de búsqueda debe mostrarse en color rojo.
     // Construir patrones insensibles a acentos por cada palabra/frase
-    const unique = Array.from(new Set(phrases)).sort((a, b) => b.length - a.length);
+    const candidatesSet = new Set(phrases);
+    if (searchTerm) candidatesSet.add(searchTerm);
+    const unique = Array.from(candidatesSet).sort((a, b) => b.length - a.length);
     const patterns = unique.map(p => buildAccentInsensitivePattern(p));
 
     // Usamos un límite personalizado que considera letras Unicode: (^|[^\p{L}]) (?!\p{L})
@@ -450,6 +484,7 @@ export default function ChapterSelector({ onSelect }) {
                       const translatedWords = Array.isArray(r.keywords) ? r.keywords.map(k => k.translatedWord).filter(Boolean) : [];
                       const inflections = Array.isArray(r.keywords) ? r.keywords.map(k => k.inflectionWord).filter(Boolean).join(', ') : '';
                       const translits = Array.isArray(r.keywords) ? r.keywords.map(k => k.transliteratedWord).filter(Boolean).join(', ') : '';
+                      const keywordsForHighlight = Array.isArray(r.keywords) ? r.keywords : [];
 
                       return (
                         <div key={`${r.book}-${r.chapter}-${r.verseNumber}-${start + idx}`} style={{ padding: '0.8rem', borderBottom: '1px solid #aaa', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
@@ -462,7 +497,7 @@ export default function ChapterSelector({ onSelect }) {
                               {inflections || ''} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
                             </div>
 
-                            <div style={{ marginTop: '0.2rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
+                            <div style={{ marginTop: '0.2rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, keywordsForHighlight)}</div>
                           </div>
                           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
                             <Button
