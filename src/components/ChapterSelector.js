@@ -241,6 +241,61 @@ export default function ChapterSelector({ onSelect }) {
   // Helper to escape regex special chars y para resaltar coincidencias (palabras completas)
   const escapeRegExp = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+  // Mapa simple de vocales a sus variantes con acentos (añadir más si es necesario)
+  const accentVariants = {
+    a: 'aáàâäãåā',
+    e: 'eéèêëē',
+    i: 'iíìîïī',
+    o: 'oóòôöõō',
+    u: 'uúùûüū',
+    A: 'AÁÀÂÄÃÅĀ',
+    E: 'EÉÈÊËĒ',
+    I: 'IÍÌÎÏĪ',
+    O: 'OÓÒÔÖÕŌ',
+    U: 'UÚÙÛÜŪ'
+  };
+
+  // Construye un fragmento de patrón regex que sea insensible a acentos para un caracter
+  const charPatternAccentInsensitive = (ch) => {
+    if (!ch) return '';
+    // Si el caracter tiene variantes listadas, crear una clase con ellas
+    if (accentVariants[ch]) {
+      const chars = accentVariants[ch];
+      // escapar cualquier posible char especial aunque en las listas no debería haber
+      const escaped = chars.split('').map(c => escapeRegExp(c)).join('');
+      return `[${escaped}]`;
+    }
+
+    // Si es una letra ASCII base minúscula que tiene variantes en la tabla (ej: 'a'), usar también la mayúscula y variantes
+    const lower = ch.toLowerCase();
+    if (accentVariants[lower]) {
+      const chars = accentVariants[lower];
+      const escaped = chars.split('').map(c => escapeRegExp(c)).join('');
+      // incluir también la versión mayúscula básica si no está
+      return `[${escaped}${escapeRegExp(ch.toUpperCase())}]`;
+    }
+
+    // Por defecto, escapar el caracter
+    return escapeRegExp(ch);
+  };
+
+  // Construye un patrón regex para una frase completa donde cada vocal es insensible a acentos
+  const buildAccentInsensitivePattern = (phrase) => {
+    if (!phrase) return '';
+    // Construir patrón caracter por caracter
+    const parts = [];
+    for (let i = 0; i < phrase.length; i++) {
+      const ch = phrase[i];
+      // Si es espacio, mantener como \s+ para que coincida con cualquier espacio en el texto
+      if (ch === ' ') {
+        parts.push('\\s+');
+        continue;
+      }
+      parts.push(charPatternAccentInsensitive(ch));
+    }
+    return parts.join('');
+  };
+
   // Resalta cualquiera de las translatedWords proporcionadas (coincidencias de palabra completa)
   const highlightMatchesMultiple = (text = "", translatedWords = []) => {
     if (!text) return text;
@@ -253,28 +308,54 @@ export default function ChapterSelector({ onSelect }) {
       const fallback = (searchQuery || '').toString().trim();
       if (!fallback) return text;
 
-      const escapedFallback = escapeRegExp(fallback);
-      const regexFallback = new RegExp(`\\b(${escapedFallback})\\b`, 'gi');
-      const partsFallback = text.split(regexFallback);
-      return partsFallback.map((part, idx) => {
-        if (part && part.toLowerCase() === fallback.toLowerCase()) {
-          return (
-            <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
-              {part}
-            </span>
-          );
-        }
-        return part;
-      });
+      // Construir patrón insensible a acentos (sin límites de palabra) y con flag 'i' para case-insensitive
+      const pattern = buildAccentInsensitivePattern(fallback);
+      try {
+        const regexFallback = new RegExp(`(${pattern})`, 'gi');
+        const partsFallback = text.split(regexFallback);
+        return partsFallback.map((part, idx) => {
+          if (!part) return part;
+          // Para decidir si resaltar: comparar versión normalizada simple sin diacríticos
+          const normalizeSimple = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          if (normalizeSimple(part).includes(normalizeSimple(fallback))) {
+            return (
+              <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
+                {part}
+              </span>
+            );
+          }
+          return part;
+        });
+      } catch (e) {
+        // En caso de que la construcción del regex falle por alguna razón, caer a un split simple
+        const escapedFallback = escapeRegExp(fallback);
+        const regexFallback = new RegExp(`(${escapedFallback})`, 'gi');
+        const partsFallback = text.split(regexFallback);
+        return partsFallback.map((part, idx) => {
+          if (part && part.toLowerCase().includes(fallback.toLowerCase())) {
+            return (
+              <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
+                {part}
+              </span>
+            );
+          }
+          return part;
+        });
+      }
     }
 
     // Eliminar duplicados y ordenar por longitud descendente para evitar solapamientos
     const unique = Array.from(new Set(phrases.map(p => p.toLowerCase()))).sort((a,b) => b.length - a.length);
-    const escaped = unique.map(escapeRegExp);
-    const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+    // Construir patrones insensibles a acentos por cada palabra/frase
+    const patterns = unique.map(p => buildAccentInsensitivePattern(p));
+    const regex = new RegExp(`\\b(${patterns.join('|')})\\b`, 'gi');
     const parts = text.split(regex);
     return parts.map((part, idx) => {
-      if (part && unique.includes(part.toLowerCase())) {
+      if (!part) return part;
+      // Usar normalización simple para comparar sin acentos
+      const normalizeSimple = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const partNorm = normalizeSimple(part);
+      if (unique.some(u => normalizeSimple(u) === partNorm)) {
         return (
           <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
             {part}
@@ -374,7 +455,7 @@ export default function ChapterSelector({ onSelect }) {
                               {inflections || '-'} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
                             </div>
 
-                            <div style={{ marginTop: '0.5rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
+                            <div style={{ marginTop: '0.2rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
                           </div>
                           <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
                             <Button
