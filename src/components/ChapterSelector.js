@@ -33,7 +33,7 @@ export default function ChapterSelector({ onSelect }) {
   const [searchError, setSearchError] = useState(null);
   // Paginación para resultados de búsqueda
   const [searchPage, setSearchPage] = useState(0);
-  const pageSize = 10; // mostrar 5 versículos por página
+  const pageSize = 20; // mostrar 5 versículos por página
 
   // 📜 Lista de libros con IDs numéricos
   const oldTestament = [
