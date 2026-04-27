@@ -33,7 +33,7 @@ export default function ChapterSelector({ onSelect }) {
   const [searchError, setSearchError] = useState(null);
   // Paginación para resultados de búsqueda
   const [searchPage, setSearchPage] = useState(0);
-  const pageSize = 5; // mostrar 5 versículos por página
+  const pageSize = 10; // mostrar 5 versículos por página
 
   // 📜 Lista de libros con IDs numéricos
   const oldTestament = [
@@ -370,8 +370,8 @@ export default function ChapterSelector({ onSelect }) {
                               {bookInfo.name} {r.chapter}:{r.verseNumber}
                             </div>
 
-                            <div style={{ fontSize: '0.9rem' , marginTop: '0.25rem'}}>
-                              <strong>{inflections || '-'} </strong> {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
+                            <div style={{ fontSize: '1rem' , marginTop: '0.25rem'}}>
+                              {inflections || '-'} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
                             </div>
 
                             <div style={{ marginTop: '0.5rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
