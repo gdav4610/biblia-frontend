@@ -303,67 +303,74 @@ export default function ChapterSelector({ onSelect }) {
       .map(p => (p || '').toString().trim())
       .filter(Boolean);
 
-    // Si no hay phrases, usar el término de búsqueda como fallback para resaltar
+    // Helper para construir nodos a partir de un regex con captura del match completo
+    const nodesFromRegex = (regex, matchGroupIndexForWord) => {
+      const nodes = [];
+      let lastIndex = 0;
+      let m;
+      let counter = 0;
+      while ((m = regex.exec(text)) !== null) {
+        // m.index es el índice del inicio del match completo
+        // la parte que nos interesa está en m[matchGr oupIndexForWord]
+        const fullIndex = m.index;
+        const prefixLength = (m[1] && matchGroupIndexForWord === 2) ? m[1].length : 0; // si usamos grupo 1 como prefijo
+        const word = m[matchGroupIndexForWord];
+        if (!word) continue;
+        const wordStart = fullIndex + prefixLength;
+        // push texto antes de la palabra
+        if (wordStart > lastIndex) {
+          nodes.push(text.slice(lastIndex, wordStart));
+        }
+        // push palabra resaltada
+        nodes.push(
+          <span key={`h-${counter++}-${wordStart}`} style={{ color: 'red', fontWeight: 700 }}>
+            {text.slice(wordStart, wordStart + word.length)}
+          </span>
+        );
+        lastIndex = wordStart + word.length;
+        // prevenir loops con matches de longitud 0
+        if (regex.lastIndex === fullIndex) regex.lastIndex++;
+      }
+      if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+      return nodes.length === 0 ? text : nodes;
+    };
+
+    // Si no hay phrases, usar el término de búsqueda como fallback para resaltar (coincidencias parciales)
     if (phrases.length === 0) {
       const fallback = (searchQuery || '').toString().trim();
       if (!fallback) return text;
 
-      // Construir patrón insensible a acentos (sin límites de palabra) y con flag 'i' para case-insensitive
       const pattern = buildAccentInsensitivePattern(fallback);
       try {
-        const regexFallback = new RegExp(`(${pattern})`, 'gi');
-        const partsFallback = text.split(regexFallback);
-        return partsFallback.map((part, idx) => {
-          if (!part) return part;
-          // Para decidir si resaltar: comparar versión normalizada simple sin diacríticos
-          const normalizeSimple = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-          if (normalizeSimple(part).includes(normalizeSimple(fallback))) {
-            return (
-              <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
-                {part}
-              </span>
-            );
-          }
-          return part;
-        });
+        // Buscar el patrón en cualquier parte (coincidencia parcial). Usamos 'u' para Unicode y 'g' para iterar.
+        const regexFallback = new RegExp(`(${pattern})`, 'giu');
+        return nodesFromRegex(regexFallback, 1);
       } catch (e) {
-        // En caso de que la construcción del regex falle por alguna razón, caer a un split simple
+        // fallback seguro
         const escapedFallback = escapeRegExp(fallback);
         const regexFallback = new RegExp(`(${escapedFallback})`, 'gi');
-        const partsFallback = text.split(regexFallback);
-        return partsFallback.map((part, idx) => {
-          if (part && part.toLowerCase().includes(fallback.toLowerCase())) {
-            return (
-              <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
-                {part}
-              </span>
-            );
-          }
-          return part;
-        });
+        return nodesFromRegex(regexFallback, 1);
       }
     }
 
-    // Eliminar duplicados y ordenar por longitud descendente para evitar solapamientos
-    const unique = Array.from(new Set(phrases.map(p => p.toLowerCase()))).sort((a,b) => b.length - a.length);
+    // Cuando hay translatedWords: queremos coincidencias completas, pero sin distinguir acentos.
     // Construir patrones insensibles a acentos por cada palabra/frase
+    const unique = Array.from(new Set(phrases)).sort((a, b) => b.length - a.length);
     const patterns = unique.map(p => buildAccentInsensitivePattern(p));
-    const regex = new RegExp(`\\b(${patterns.join('|')})\\b`, 'gi');
-    const parts = text.split(regex);
-    return parts.map((part, idx) => {
-      if (!part) return part;
-      // Usar normalización simple para comparar sin acentos
-      const normalizeSimple = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      const partNorm = normalizeSimple(part);
-      if (unique.some(u => normalizeSimple(u) === partNorm)) {
-        return (
-          <span key={idx} style={{ color: 'red', fontWeight: 700 }}>
-            {part}
-          </span>
-        );
-      }
-      return part;
-    });
+
+    // Usamos un límite personalizado que considera letras Unicode: (^|[^\p{L}]) (?!\p{L})
+    // Capturamos el posible prefijo en el grupo 1 y la palabra en el grupo 2.
+    const combined = patterns.join('|');
+    let boundaryRegex;
+    try {
+      boundaryRegex = new RegExp(`(^|[^\\p{L}])(${combined})(?!\\p{L})`, 'giu');
+      return nodesFromRegex(boundaryRegex, 2);
+    } catch (e) {
+      // Si el motor no soporta \p{L} o la construcción falla, caemos a una alternativa más amplia usando caracteres latinos comunes.
+      const lettersClass = 'A-Za-zÀ-ÖØ-öø-ÿÑñ';
+      boundaryRegex = new RegExp(`(^|[^${lettersClass}])(${combined})(?![${lettersClass}])`, 'gi');
+      return nodesFromRegex(boundaryRegex, 2);
+    }
   };
 
   // Helper: obtiene bookId por nombre (case-insensitive)
@@ -452,7 +459,7 @@ export default function ChapterSelector({ onSelect }) {
                             </div>
 
                             <div style={{ fontSize: '1rem' , marginTop: '0.25rem'}}>
-                              {inflections || '-'} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
+                              {inflections || ''} {translits ? `(${translits})` : ''} {translatedWords.length > 0 ? `— ${translatedWords.join(', ')}` : ''}
                             </div>
 
                             <div style={{ marginTop: '0.2rem', lineHeight: 1.4 }}>{highlightMatchesMultiple(r.text, translatedWords)}</div>
