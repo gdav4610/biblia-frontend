@@ -481,9 +481,6 @@ export default function ChapterSelector({ onSelect }) {
 
                       const bookInfo = getBookById(bookIdResolved) || { name: r.book || (bookIdFromResponse != null ? `Libro ${r.idBook}` : `Libro`) };
 
-                      const translatedWords = Array.isArray(r.keywords) ? r.keywords.map(k => k.translatedWord).filter(Boolean) : [];
-                      const inflections = Array.isArray(r.keywords) ? r.keywords.map(k => k.inflectionWord).filter(Boolean).join(', ') : '';
-                      const translits = Array.isArray(r.keywords) ? r.keywords.map(k => k.transliteratedWord).filter(Boolean).join(', ') : '';
                       const keywordsForHighlight = Array.isArray(r.keywords) ? r.keywords : [];
 
                       return (
