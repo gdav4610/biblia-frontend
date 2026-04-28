@@ -157,7 +157,15 @@ export default function ChapterSelector({ onSelect }) {
   const handleSearch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     const q = (searchQuery || "").trim();
+    // Validación: mínimo 3 caracteres
     if (!q) return;
+    if (q.length < 3) {
+      setSearchError('Introduce al menos 3 caracteres');
+      setSearchResults(null);
+      setIsSearchModalOpen(true);
+      return;
+    }
+
     setSearchLoading(true);
     setSearchError(null);
     setSearchResults(null);
@@ -344,10 +352,33 @@ export default function ChapterSelector({ onSelect }) {
         // Determinar transliteración (buscando por la palabra encontrada, normalizada)
         const matchedText = text.slice(wordStart, wordStart + word.length);
         const keyNorm = stripAccents(matchedText).toLowerCase().trim();
-        const translit = translitMap[keyNorm];
+        let translit = translitMap[keyNorm];
 
         // Determinar si esta coincidencia corresponde exactamente al término de búsqueda
-        const isSearchMatch = searchNorm && keyNorm === searchNorm;
+//        const isSearchMatch = searchNorm && keyNorm === searchNorm;
+
+        // marcar en rojo sólo si:
+        // - hay un searchNorm definido
+        // - el match corresponde a una translatedWord (está en translitMap)
+        // - y el translatedWord normalizado contiene searchNorm como substring
+        let isSearchMatch = false;
+        if (searchNorm) {
+          if (translitMap[keyNorm]) {
+            if (keyNorm.includes(searchNorm)) {
+              isSearchMatch = true;
+            }
+          } else {
+            // fallback: comportamiento anterior para coincidencia exacta
+            if (keyNorm === searchNorm) {
+              isSearchMatch = true;
+            }
+
+              const lastPartOfSearch = searchNorm.split(' ').at(-1);
+              if (translitMap[lastPartOfSearch]) {
+                translit = translitMap[lastPartOfSearch];
+              }
+          }
+        }
 
         // push palabra resaltada; solo el término de búsqueda llevará color rojo
         nodes.push(
@@ -429,10 +460,15 @@ export default function ChapterSelector({ onSelect }) {
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ flex: 1, padding: '0.5rem' }}
         />
-        <button type="submit" disabled={searchLoading} style={{ padding: '0.5rem 1rem' }}>
+        <button type="submit" disabled={searchLoading || ((searchQuery || '').trim().length < 3)} style={{ padding: '0.5rem 1rem' }}>
           {searchLoading ? 'Buscando...' : 'Buscar'}
         </button>
       </form>
+
+      {/* Aviso inline cuando el término es corto */}
+      {((searchQuery || '').trim().length > 0 && (searchQuery || '').trim().length < 3) && (
+        <div style={{ color: 'orange', marginTop: '-0.5rem', marginBottom: '0.75rem' }}>Ingrese al menos 3 caracteres para buscar</div>
+      )}
 
       {/* Modal de resultados usando MUI Dialog (visualmente igual al modal StrongDetail) */}
       <Dialog
