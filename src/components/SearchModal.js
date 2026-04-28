@@ -46,6 +46,13 @@ export default function SearchModal({
     U: 'UÚÙÛÜŪ'
   };
 
+  // función común para eliminar acentos (usada en varios lugares)
+  const stripAccents = (s = '') =>
+    s && s.toString && s.normalize ? s.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : (s || '').toString();
+
+  const searchTerm = (searchQuery || '').toString().trim();
+  const searchNorm = stripAccents(searchTerm).toLowerCase().trim();
+
   const charPatternAccentInsensitive = (ch) => {
     if (!ch) return '';
     if (accentVariants[ch]) {
@@ -82,11 +89,6 @@ export default function SearchModal({
       .map(p => (p || '').toString().trim())
       .filter(Boolean);
 
-    const stripAccents = (s = '') =>
-      s
-        .toString()
-        .normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
-
     const translitMap = {};
     if (Array.isArray(keywords)) {
       for (const k of keywords) {
@@ -95,9 +97,6 @@ export default function SearchModal({
         if (!translitMap[key]) translitMap[key] = k.transliteratedWord || '';
       }
     }
-
-    const searchTerm = (searchQuery || '').toString().trim();
-    const searchNorm = stripAccents(searchTerm).toLowerCase().trim();
 
     const nodesFromRegex = (regex, matchGroupIndexForWord) => {
       const nodes = [];
@@ -116,7 +115,25 @@ export default function SearchModal({
         const matchedText = text.slice(wordStart, wordStart + word.length);
         const keyNorm = stripAccents(matchedText).toLowerCase().trim();
         const translit = translitMap[keyNorm];
-        const isSearchMatch = searchNorm && keyNorm === searchNorm;
+
+        // marcar en rojo sólo si:
+        // - hay un searchNorm definido
+        // - el match corresponde a una translatedWord (está en translitMap)
+        // - y el translatedWord normalizado contiene searchNorm como substring
+        let isSearchMatch = false;
+
+        if (searchNorm) {
+          if (translitMap[keyNorm]) {
+            if (keyNorm.includes(searchNorm)) {
+              isSearchMatch = true;
+            }
+          } else {
+            // fallback: comportamiento anterior para coincidencia exacta
+            if (keyNorm === searchNorm) {
+              isSearchMatch = true;
+            }
+          }
+        }
 
         nodes.push(
           <span key={`h-${counter++}-${wordStart}`} style={{ color: isSearchMatch ? 'red' : undefined, fontWeight: 700 }}>
