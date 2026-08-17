@@ -28,6 +28,9 @@ const blinkDark = keyframes`
 const BLINK_MS = 1000;   // duración de un parpadeo
 const BLINK_COUNT = 4;  // veces que parpadea
 
+// Marca el popper del tooltip para poder distinguir un tap dentro de él de uno fuera
+const KEYWORD_TOOLTIP_CLASS = "keyword-tooltip";
+
 // Desplaza la ventana hasta dejar el versículo completo a la vista.
 // Si el versículo cabe en el viewport lo centra; si no, lo alinea arriba
 // para que al menos empiece a leerse desde el principio.
@@ -56,6 +59,42 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
   const [blinkVerse, setBlinkVerse] = useState(null);
   // Nodos DOM de cada versículo, indexados por verseNumber
   const verseRefs = useRef(new Map());
+
+  // En dispositivos sin hover (móvil/tablet) el tooltip por defecto de MUI exige
+  // pulsación larga y se cierra al levantar el dedo, así que el botón "Ver detalle"
+  // queda inalcanzable. Ahí lo controlamos nosotros: se abre con un tap y se
+  // mantiene abierto hasta que se toca fuera o se vuelve a tocar la palabra.
+  const [isTouch, setIsTouch] = useState(
+    () => typeof window !== "undefined"
+      && typeof window.matchMedia === "function"
+      && window.matchMedia("(hover: none)").matches
+  );
+  // id del keyword cuyo tooltip está abierto por tap (null = ninguno)
+  const [openKeywordId, setOpenKeywordId] = useState(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(hover: none)");
+    const onChange = (ev) => setIsTouch(ev.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Cerrar el tooltip al tocar fuera. Los taps sobre el propio tooltip (p. ej. el
+  // botón "Ver detalle") o sobre otra palabra clave no cuentan como "fuera".
+  useEffect(() => {
+    if (!isTouch || !openKeywordId) return;
+
+    const onPointerDown = (ev) => {
+      const t = ev.target;
+      if (t && typeof t.closest === "function"
+        && (t.closest(`.${KEYWORD_TOOLTIP_CLASS}`) || t.closest("[data-keyword-anchor]"))) return;
+      setOpenKeywordId(null);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isTouch, openKeywordId]);
 
   useEffect(() => {
     setLoading(true);
@@ -189,6 +228,7 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
   const openStrong = (wordInfo) => {
     setSelectedStrongInfo(wordInfo);
     setOpenStrongModal(true);
+    setOpenKeywordId(null); // el tooltip ya cumplió su función
   };
 
   const closeStrong = () => {
@@ -328,9 +368,25 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
           const inflectionDisplay = wordInfo.sourceInflection || wordInfo.compoundInflection || '';
           const transliterationDisplay = wordInfo.sourceTransliteration || wordInfo.compoundTransliteration || '';
 
+          // Identificador único de esta aparición dentro del capítulo
+          const keywordId = `${verse.verseNumber}-${i}`;
+
+          // En táctil el tooltip lo controlamos nosotros (tap para abrir/cerrar);
+          // en escritorio se deja el comportamiento de hover por defecto de MUI.
+          const touchTooltipProps = isTouch
+            ? {
+                open: openKeywordId === keywordId,
+                disableHoverListener: true,
+                disableFocusListener: true,
+                disableTouchListener: true,
+              }
+            : {};
+
           tokens.push(
             <Tooltip
               key={`kw-${i}`}
+              {...touchTooltipProps}
+              slotProps={{ popper: { className: KEYWORD_TOOLTIP_CLASS } }}
               title={
                 <div style={{ fontSize: "1rem" }}>
                    - Morfema: <span style={{ fontSize: "1.1em", marginTop: "0px"}}>{wordInfo.transliteratedWord}</span> ({wordInfo.inflectionWord ? <em>{wordInfo.inflectionWord}</em> : null}) <br />
@@ -351,12 +407,21 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
               <span
                 data-strong={wordInfo.strongNumber}
                 data-llave={`strong-${wordInfo.strongNumber}`}
-                onClick={() => setHoveredStrong(wordInfo.strongNumber)}
-                onMouseEnter={() => setHoveredStrong(wordInfo.strongNumber)}
-                onMouseLeave={() => setHoveredStrong(null)}
+                data-keyword-anchor=""
+                onClick={() => {
+                  setHoveredStrong(wordInfo.strongNumber);
+                  // En táctil el tap alterna el tooltip de esta palabra
+                  if (isTouch) {
+                    setOpenKeywordId((prev) => (prev === keywordId ? null : keywordId));
+                  }
+                }}
+                onMouseEnter={isTouch ? undefined : () => setHoveredStrong(wordInfo.strongNumber)}
+                onMouseLeave={isTouch ? undefined : () => setHoveredStrong(null)}
                 style={{
                   color: wordInfo.compoundMeaning ? '#60ba20' : "#3386d4",
                   cursor: "help",
+                  // Sin el resalte azul del navegador al tocar, que ensucia el texto
+                  WebkitTapHighlightColor: "transparent",
                   fontWeight: hoveredStrong === wordInfo.strongNumber ? 700 : 500,
                   textDecoration: hoveredStrong === wordInfo.strongNumber ? "underline" : "none",
                 }}
