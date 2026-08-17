@@ -318,12 +318,14 @@ export default function ChapterSelector({ onSelect }) {
         .toString()
         .normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
 
-    const translitMap = {};
+    // Map en lugar de objeto literal: las claves son palabras del texto y pueden
+    // colisionar con propiedades heredadas de Object.prototype (ej. "constructor").
+    const translitMap = new Map();
     if (Array.isArray(keywords)) {
       for (const k of keywords) {
         if (!k || !k.translatedWord) continue;
         const key = stripAccents(k.translatedWord).toLowerCase().trim();
-        if (!translitMap[key]) translitMap[key] = k.transliteratedWord || '';
+        if (!translitMap.get(key)) translitMap.set(key, k.transliteratedWord || '');
       }
     }
 
@@ -352,7 +354,7 @@ export default function ChapterSelector({ onSelect }) {
         // Determinar transliteración (buscando por la palabra encontrada, normalizada)
         const matchedText = text.slice(wordStart, wordStart + word.length);
         const keyNorm = stripAccents(matchedText).toLowerCase().trim();
-        let translit = translitMap[keyNorm];
+        let translit = translitMap.get(keyNorm);
 
         // Determinar si esta coincidencia corresponde exactamente al término de búsqueda
 //        const isSearchMatch = searchNorm && keyNorm === searchNorm;
@@ -363,7 +365,7 @@ export default function ChapterSelector({ onSelect }) {
         // - y el translatedWord normalizado contiene searchNorm como substring
         let isSearchMatch = false;
         if (searchNorm) {
-          if (translitMap[keyNorm]) {
+          if (translitMap.get(keyNorm)) {
             if (keyNorm.includes(searchNorm)) {
               isSearchMatch = true;
             }
@@ -374,8 +376,8 @@ export default function ChapterSelector({ onSelect }) {
             }
 
               const lastPartOfSearch = searchNorm.split(' ').at(-1);
-              if (translitMap[lastPartOfSearch]) {
-                translit = translitMap[lastPartOfSearch];
+              if (translitMap.get(lastPartOfSearch)) {
+                translit = translitMap.get(lastPartOfSearch);
               }
           }
         }

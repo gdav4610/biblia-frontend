@@ -140,12 +140,15 @@ export default function BibleChapter({ book, chapter }) {
 
   const renderVerse = (verse) => {
 
-    const keywordMap = Object.fromEntries(
+    // Usamos Map (y no un objeto literal) porque las claves vienen del texto bíblico y
+    // pueden colisionar con propiedades heredadas de Object.prototype
+    // (ej. "constructor" en Hebreos 11:10), lo que rompía el render.
+    const keywordMap = new Map(
         (verse.keywords || []).map((k) => {
-          const key = (k.translatedWord.trim() || "").toString();
+          const key = ((k.translatedWord || "").trim() || "").toString();
 
           const normalized = {
-            translatedWord: k.translatedWord.trim(),
+            translatedWord: (k.translatedWord || "").trim(),
             inflectionWord: k.inflectionWord,
             transliteratedWord: k.transliteratedWord,
             strongNumber: k.strongNumber,
@@ -163,8 +166,8 @@ export default function BibleChapter({ book, chapter }) {
     );
 
     // indice por primera palabra para evitar chequear todas las keywords en cada posición
-    const firstWordMap = {};
-    const keywordKeys = Object.keys(keywordMap);
+    const firstWordMap = new Map();
+    const keywordKeys = Array.from(keywordMap.keys());
     const trimSpacesLocal = (s = "") => s.toString().trim();
     const removeTrailingPunctuationLocal = (str = "") => {
       if (!str) return str;
@@ -175,8 +178,8 @@ export default function BibleChapter({ book, chapter }) {
     keywordKeys.forEach((kw) => {
       const first = trimSpacesLocal(removeTrailingPunctuationLocal(kw.split(" ")[0] || "")).toString();
       if (!first) return;
-      if (!firstWordMap[first]) firstWordMap[first] = [];
-      firstWordMap[first].push(kw);
+      if (!firstWordMap.has(first)) firstWordMap.set(first, []);
+      firstWordMap.get(first).push(kw);
     });
 
     // Set para recordar keywords que ya hicieron match en este verso (no volver a evaluarlas)
@@ -208,7 +211,7 @@ export default function BibleChapter({ book, chapter }) {
         // Intentar emparejar una palabra clave que traducida consiste de varias palabras
         // Primero obtener las keywords cuya primera palabra coincide con la palabra actual
         const candidateFirst = trimSpaces(removeTrailingPunctuation(words[i] || ""));
-        const possibleKeys = firstWordMap[candidateFirst] || [];
+        const possibleKeys = firstWordMap.get(candidateFirst) || [];
 
         // Optimización: filtrar las posibles keys para excluir las ya usadas antes de evaluar
         const possibleUnseenKeys = possibleKeys.filter(k => !usedKeywords.has(k));
@@ -235,7 +238,7 @@ export default function BibleChapter({ book, chapter }) {
           // Además, removerla del índice `firstWordMap` para no volver a iterar sobre ella
           try {
             const first = trimSpaces(removeTrailingPunctuation((matchKeyword || "").split(" ")[0] || ""));
-            const arr = firstWordMap[first];
+            const arr = firstWordMap.get(first);
             if (arr && arr.length) {
               const idx = arr.indexOf(matchKeyword);
               if (idx !== -1) arr.splice(idx, 1);
@@ -244,7 +247,7 @@ export default function BibleChapter({ book, chapter }) {
             // safe guard: si algo falla, no rompe el rendering
           }
 
-          const wordInfo = keywordMap[matchKeyword];
+          const wordInfo = keywordMap.get(matchKeyword);
           const keywordsLength = matchKeyword.split(" ").length;
 
           // Fallbacks para mostrar en el tooltip: si no viene sourceInflection usar compoundInflection,
