@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
+import { keyframes } from "@mui/system";
 import Tooltip from "@mui/material/Tooltip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
@@ -12,7 +13,37 @@ import CloseIcon from "@mui/icons-material/Close";
 import StrongDetail from "./StrongDetail";
 import apiFetch from "../utils/apiFetch";
 
-export default function BibleChapter({ book, chapter }) {
+// Parpadeo del versículo al que se llega desde la búsqueda.
+// El halo se pinta con box-shadow (fuera del border-box) para no alterar el layout.
+const blinkLight = keyframes`
+  0%, 100% { background-color: rgba(255, 193, 7, 0);    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0); }
+  50%      { background-color: rgba(255, 193, 7, 0.55); box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.55); }
+`;
+
+const blinkDark = keyframes`
+  0%, 100% { background-color: rgba(255, 213, 79, 0);    box-shadow: 0 0 0 4px rgba(255, 213, 79, 0); }
+  50%      { background-color: rgba(255, 213, 79, 0.32); box-shadow: 0 0 0 4px rgba(255, 213, 79, 0.32); }
+`;
+
+const BLINK_MS = 1000;   // duración de un parpadeo
+const BLINK_COUNT = 4;  // veces que parpadea
+
+// Desplaza la ventana hasta dejar el versículo completo a la vista.
+// Si el versículo cabe en el viewport lo centra; si no, lo alinea arriba
+// para que al menos empiece a leerse desde el principio.
+const scrollVerseIntoView = (el) => {
+  const rect = el.getBoundingClientRect();
+  const absoluteTop = rect.top + window.scrollY;
+  const margin = 24;
+  const viewport = window.innerHeight;
+  const top = rect.height >= viewport - margin * 2
+    ? absoluteTop - margin
+    : absoluteTop - (viewport - rect.height) / 2;
+
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+};
+
+export default function BibleChapter({ book, chapter, highlightVerse }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,11 +52,16 @@ export default function BibleChapter({ book, chapter }) {
   // Estado para el modal de detalle Strong
   const [openStrongModal, setOpenStrongModal] = useState(false);
   const [selectedStrongInfo, setSelectedStrongInfo] = useState(null);
+  // Versículo que está parpadeando ahora mismo (null = ninguno)
+  const [blinkVerse, setBlinkVerse] = useState(null);
+  // Nodos DOM de cada versículo, indexados por verseNumber
+  const verseRefs = useRef(new Map());
 
   useEffect(() => {
     setLoading(true);
     setError(null);
     setData(null);
+    verseRefs.current.clear();
 
     apiFetch(`/api/bible/chapter/${book}/${chapter}`)
       .then((res) => {
@@ -44,6 +80,43 @@ export default function BibleChapter({ book, chapter }) {
         setLoading(false);
       });
   }, [book, chapter]);
+
+  // Al llegar desde la búsqueda: desplazarse al versículo y hacerlo parpadear.
+  // `highlightVerse` es un objeto nuevo en cada clic de "Ir", así que este efecto
+  // se vuelve a disparar aunque se pida el mismo versículo dos veces seguidas.
+  useEffect(() => {
+    if (loading || !data || !highlightVerse) return;
+
+    const target = Number(highlightVerse.verseNumber);
+    if (!target) return;
+
+    // Cortar cualquier parpadeo previo para que la animación reinicie de cero
+    setBlinkVerse(null);
+
+    let cancelled = false;
+    let timer = null;
+
+    // Esperar al siguiente frame: el Fade ya montó los versículos y las
+    // posiciones que mide scrollVerseIntoView son las definitivas.
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return;
+
+      const el = verseRefs.current.get(target);
+      if (!el) return;
+
+      scrollVerseIntoView(el);
+      setBlinkVerse(target);
+      timer = setTimeout(() => {
+        if (!cancelled) setBlinkVerse(null);
+      }, BLINK_MS * BLINK_COUNT);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      if (timer) clearTimeout(timer);
+    };
+  }, [data, loading, highlightVerse]);
 
 
   // Calcular los 4 keywords más repetidos por strongNumber
@@ -311,15 +384,33 @@ export default function BibleChapter({ book, chapter }) {
         i++;
     }
 
+    const isBlinking = blinkVerse === verse.verseNumber;
+
     return (
-      <div key={verse.verseNumber} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '0.3rem', marginTop: '0.3rem' }}>
+      <Box
+        key={verse.verseNumber}
+        ref={(el) => {
+          if (el) verseRefs.current.set(verse.verseNumber, el);
+          else verseRefs.current.delete(verse.verseNumber);
+        }}
+        sx={(theme) => ({
+          display: 'flex',
+          alignItems: 'flex-start',
+          marginBottom: '0.3rem',
+          marginTop: '0.3rem',
+          borderRadius: '4px',
+          ...(isBlinking && {
+            animation: `${theme.palette.mode === 'dark' ? blinkDark : blinkLight} ${BLINK_MS}ms ease-in-out ${BLINK_COUNT}`,
+          }),
+        })}
+      >
         <div style={{ flex: '0 0 1rem', textAlign: 'right', paddingRight: '0.4rem', lineHeight: '1.6' }}>
           <strong>{verse.verseNumber}</strong>
         </div>
         <div style={{ flex: '1 1 auto', lineHeight: '1.6', fontSize: '1.12rem' }}>
           {tokens}
         </div>
-      </div>
+      </Box>
     );
   };
 

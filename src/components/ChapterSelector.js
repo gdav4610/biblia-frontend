@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -25,6 +25,10 @@ export default function ChapterSelector({ onSelect }) {
       return 1;
     }
   });
+
+  // Versículo pendiente de resaltar tras pulsar "Ir". Lo consume el efecto de
+  // [bookId, chapter], que es quien acaba llamando a onSelect.
+  const pendingVerseRef = useRef(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
@@ -135,7 +139,13 @@ export default function ChapterSelector({ onSelect }) {
       // ignore
     }
 
-    onSelect(bookId, clamped);
+    // Consumir el versículo pendiente (si venimos de "Ir" en la búsqueda).
+    // Ojo: se consume aquí y no antes del clamp, para no perderlo si el
+    // capítulo tuvo que ajustarse y el efecto se reejecuta.
+    const pendingVerse = pendingVerseRef.current;
+    pendingVerseRef.current = null;
+
+    onSelect(bookId, clamped, pendingVerse);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, chapter]);
 
@@ -539,7 +549,20 @@ export default function ChapterSelector({ onSelect }) {
                                 try {
                                   setIsSearchModalOpen(false);
                                   const targetBookId = bookIdResolved || bookId; // si no se resuelve, usar bookId actual
-                                  onSelect(targetBookId, r.chapter);
+                                  const targetChapter = Number(r.chapter);
+                                  const targetVerse = Number(r.verseNumber);
+
+                                  if (targetBookId === bookId && targetChapter === chapter) {
+                                    // Ya estamos en ese capítulo: el efecto no se dispararía,
+                                    // así que notificamos directamente para resaltar el versículo.
+                                    onSelect(targetBookId, targetChapter, targetVerse);
+                                  } else {
+                                    // Sincronizamos los selectores; el efecto de [bookId, chapter]
+                                    // llamará a onSelect con el versículo pendiente.
+                                    pendingVerseRef.current = targetVerse;
+                                    setBookId(targetBookId);
+                                    setChapter(targetChapter);
+                                  }
                                 } catch (e) {
                                   // ignore
                                 }

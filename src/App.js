@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import IconButton from "@mui/material/IconButton";
@@ -61,9 +61,19 @@ function BibleChapterPage() {
     }
   }, [darkMode]);
 
-  const handleSelect = (newBook, newChapter) => {
+  // Versículo a resaltar tras pulsar "Ir" en la búsqueda: { verseNumber, nonce }.
+  // El nonce fuerza que se vuelva a resaltar aunque se pida el mismo versículo.
+  const [highlightVerse, setHighlightVerse] = useState(null);
+  const highlightNonce = useRef(0);
+
+  const handleSelect = (newBook, newChapter, verseNumber) => {
     setBook(newBook);
     setChapter(newChapter);
+
+    const parsed = Number(verseNumber);
+    setHighlightVerse(
+      parsed > 0 ? { verseNumber: parsed, nonce: ++highlightNonce.current } : null
+    );
   };
 
   const toggleDarkMode = () => setDarkMode((prev) => !prev);
@@ -107,7 +117,7 @@ function BibleChapterPage() {
         </header>
 
         <ChapterSelector onSelect={handleSelect} />
-        <BibleChapter book={book} chapter={chapter} />
+        <BibleChapter book={book} chapter={chapter} highlightVerse={highlightVerse} />
       </div>
     </ThemeProvider>
   );
