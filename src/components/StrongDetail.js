@@ -366,6 +366,40 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   };
 
 
+  const onCountClickBook = (idBook) => {
+    if (!currentStrongCode) return;
+    setDetailsLoading(true);
+    setDetailsError(false);
+    setDetailVerses(null);
+
+    // Construir URL: incluir idBook e includeLXX
+    let url = `/api/strongs/${encodeURIComponent(currentStrongCode)}/details`;
+    const params = [];
+    if (idBook !== null && idBook !== undefined) {
+      params.push(`idBook=${encodeURIComponent(idBook)}`);
+    }
+    params.push(`includeLXX=${includeLXX ? 'false' : 'false'}`);
+    url = `${url}?${params.join('&')}`;
+
+    apiFetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then((json) => {
+        // Se espera que el JSON contenga `keywordsWithVerse` (array)
+        if (json && Array.isArray(json.keywordsWithVerse)) {
+          setDetailVerses(json.keywordsWithVerse);
+          setView("details");
+        } else {
+          setDetailsError(true);
+        }
+      })
+      .catch(() => setDetailsError(true))
+      .finally(() => setDetailsLoading(false));
+  };
+
+
   const backToStats = () => {
     setView("stats");
     setDetailVerses(null);
@@ -753,6 +787,39 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
                   fontSize: '0.95em'
                 }}
                 title={`Ver detalles para "${ex.transliteratedWord}"`}
+              >
+                {ex.count}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+
+      {/* Vista: estadísticas (Libros) */}
+      {view === "stats" && (
+        <Typography variant="body1" gutterBottom style={{ marginTop: 10 }}>
+          <strong>Libros que la contienen:</strong>
+        </Typography>
+      )}
+
+      {view === "stats" && (
+        <ul>
+          {(data.keywordBookStats || []).map((ex, idx) => (
+            <li key={idx} style={{ marginBottom: 6 }}>
+              <span style={{ marginRight: 8 }}>{ex.bookName}</span>
+              <button
+                onClick={() => onCountClickBook(ex.idBook)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0,
+                  fontSize: '0.95em'
+                }}
+                title={`Ver detalles en "${ex.bookName}"`}
               >
                 {ex.count}
               </button>
