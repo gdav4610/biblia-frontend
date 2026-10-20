@@ -489,15 +489,16 @@ export default function ChapterSelector({ onSelect }) {
         fullWidth
         maxWidth="md"
         aria-labelledby="search-dialog-title"
+        PaperProps={{ sx: { m: 1, width: 'calc(100% - 16px)', maxHeight: 'calc(100% - 16px)' } }}
       >
-        <DialogTitle id="search-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <DialogTitle id="search-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 1 }}>
           Resultados de búsqueda
           <IconButton onClick={() => setIsSearchModalOpen(false)} size="small" aria-label="Cerrar">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ px: 1, py: 1.5 }}>
           {searchError && <div style={{ color: 'red' }}>Error: {searchError}</div>}
 
           {!searchError && searchResults && searchResults.length === 0 && (

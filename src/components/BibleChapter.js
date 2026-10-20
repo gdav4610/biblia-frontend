@@ -620,14 +620,15 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
           fullWidth
           maxWidth="md"
           aria-labelledby="strong-dialog-title"
+          PaperProps={{ sx: { m: 1, width: 'calc(100% - 16px)', maxHeight: 'calc(100% - 16px)' } }}
         >
-          <DialogTitle id="strong-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <DialogTitle id="strong-dialog-title" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 1 }}>
             {selectedStrongInfo ? `Strong ${selectedStrongInfo.strongNumber}` : 'Detalle Strong'}
             <IconButton onClick={closeStrong} size="small" aria-label="Cerrar">
               <CloseIcon />
             </IconButton>
           </DialogTitle>
-          <DialogContent dividers>
+          <DialogContent dividers sx={{ px: 1, py: 1.5 }}>
             {selectedStrongInfo ? (
               <StrongDetail
                 strongCode={selectedStrongInfo.strongNumber}
