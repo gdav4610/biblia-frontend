@@ -84,6 +84,22 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   // Valor inicial del strong: priorizar prop strongCode, luego strongNumber prop, luego initialData, luego ruta
   const initialStrong = strongCode || propStrongNumber || (initialData && initialData.strongNumber) || routeStrong;
   const [currentStrongCode, setCurrentStrongCode] = React.useState(initialStrong);
+  // Palabras con las que se abrió el modal, para resaltarlas en las listas
+  // "Morfemas en la Biblia" y "Traducido en la Biblia como".
+  // Si no vienen o no aparecen en las listas, simplemente no se resalta nada.
+  // Distingue mayúsculas/minúsculas: en la lista pueden venir ambas variantes (ej. "Señor" y "señor").
+  const normalizeWord = (w) => (w === null || w === undefined ? '' : String(w).trim());
+  const initialMorpheme = normalizeWord(initialData && initialData.transliteratedWord);
+  const initialTranslated = normalizeWord(initialData && initialData.translatedWord);
+  const isInitialStrong = () => String(currentStrongCode) === String(initialStrong);
+  const isHighlighted = (word, target) => target !== '' && isInitialStrong() && normalizeWord(word) === target;
+  const highlightStyle = {
+    backgroundColor: '#fff59d',
+    color: '#000',
+    fontWeight: 600,
+    padding: '1px 6px',
+    borderRadius: 4,
+  };
 
   const [data, setData] = React.useState(initialData || null);
   // Si se pasó initialData y corresponde al strong inicial, empezar con loading=false para mostrarla mientras refrescamos en background.
@@ -715,9 +731,16 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       {/* Vista: estadísticas (Translated) */}
       {view === "stats" && (
         <ul>
-          {(data.keywordStatsTranslated || []).map((ex, idx) => (
+          {(Array.isArray(data.keywordStatsTranslated) ? data.keywordStatsTranslated : []).map((ex, idx) => {
+            const isInitialTranslated = isHighlighted(ex && ex.translatedWord, initialTranslated);
+            return (
             <li key={idx} style={{ marginBottom: 6 }}>
-              <span style={{ marginRight: 8 }}>{ex.translatedWord === "" ? "(Sin traducción)" : ex.translatedWord}</span>
+              <span
+                style={{ marginRight: 8, ...(isInitialTranslated ? highlightStyle : {}) }}
+                title={isInitialTranslated ? 'Traducción seleccionada' : undefined}
+              >
+                {ex.translatedWord === "" ? "(Sin traducción)" : ex.translatedWord}
+              </span>
               <button
                 onClick={() => onCountClickTranslated(ex.translatedWord)}
                 style={{
@@ -734,7 +757,8 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                 {ex.count}
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
@@ -772,9 +796,16 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
       {/* Vista: estadísticas (Transliterated) */}
       {view === "stats" && (
         <ul>
-          {(data.keywordStats || []).map((ex, idx) => (
+          {(Array.isArray(data.keywordStats) ? data.keywordStats : []).map((ex, idx) => {
+            const isInitialMorpheme = isHighlighted(ex && ex.transliteratedWord, initialMorpheme);
+            return (
             <li key={idx} style={{ marginBottom: 6 }}>
-              <span style={{ marginRight: 8 }}>{ex.transliteratedWord === "" ? "(Sin transliteración)" : ex.transliteratedWord}</span>
+              <span
+                style={{ marginRight: 8, ...(isInitialMorpheme ? highlightStyle : {}) }}
+                title={isInitialMorpheme ? 'Morfema seleccionado' : undefined}
+              >
+                {ex.transliteratedWord === "" ? "(Sin transliteración)" : ex.transliteratedWord}
+              </span>
               <button
                 onClick={() => onCountClick(ex.transliteratedWord)}
                 style={{
@@ -791,7 +822,8 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
                 {ex.count}
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 
