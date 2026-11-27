@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import Box from "@mui/material/Box";
+import { useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -93,9 +94,12 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const initialTranslated = normalizeWord(initialData && initialData.translatedWord);
   const isInitialStrong = () => String(currentStrongCode) === String(initialStrong);
   const isHighlighted = (word, target) => target !== '' && isInitialStrong() && normalizeWord(word) === target;
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
+  // Modo día: ámbar más intenso para que contraste con el fondo papiro; modo noche: amarillo claro
   const highlightStyle = {
-    backgroundColor: '#fff59d',
-    color: '#000',
+    backgroundColor: isDarkMode ? '#fff59d' : '#ffca28',
+    color: isDarkMode ? '#000' : '#3e2723',
     fontWeight: 600,
     padding: '1px 6px',
     borderRadius: 4,
@@ -711,10 +715,9 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
             <li key={idx} style={{ marginBottom: 6 }}>
               <Button
                 key={`strong-item-${idx}`}
-                size="small"
                 variant="text"
                 onClick={() => changeStrong(item.idWord)}
-                style={{ padding: '0px 5px', minWidth: 0, marginRight: 10, textTransform: 'none' }}
+                style={{ padding: '2px 6px', minWidth: 0, marginRight: 10, textTransform: 'none', fontSize: '1rem' }}
               >
                 {item.transliteratedWord} - {item.meaning}
               </Button>
