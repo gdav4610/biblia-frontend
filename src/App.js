@@ -93,6 +93,9 @@ function BibleChapterPage() {
         paper: darkMode ? "#1e1e1e" : papiroPaper,
       },
     },
+    typography: {
+      fontFamily: "'Literata', 'Noto Serif', 'Times New Roman', serif",
+    },
   });
 
   return (
