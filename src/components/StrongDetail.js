@@ -590,7 +590,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
         </div>
       </Box>
 
-      <Typography variant="body2" gutterBottom>
+      <Typography variant="body1" gutterBottom>
           <strong>{displayLabel}</strong>{' '}
         {strongParts && strongParts.length > 1 ? (
           <span>
@@ -600,7 +600,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
                 size="small"
                 variant="text"
                 onClick={() => changeStrong(part)}
-                style={{ padding: '2px 5px', minWidth: 0, marginRight: 5, textTransform: 'none' }}
+                style={{ padding: '2px 5px', minWidth: 0, marginRight: 5, textTransform: 'none', fontSize: '0.95em' }}
               >
                 {transliterationParts[idx]}
               </Button>
@@ -621,16 +621,16 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
       {/* Mostrar 'Primera aparición' si viene en la respuesta */}
       {data && (data.firstAppBook !== undefined && data.firstAppBook !== null) && (
-        <Typography variant="body2" gutterBottom>
+        <Typography variant="body1" gutterBottom>
           <strong>Primera aparición: </strong>
-          <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none' }}>
+          <Button size="small" variant="text" onClick={() => openFirstAppearanceChapter(data.firstAppBook, data.firstAppChapter, data.firstAppVerse)} style={{ padding: '2px 6px', minWidth: 0, marginRight: 6, textTransform: 'none', fontSize: '0.95em' }}>
             {firstAppBookName} {String(data.firstAppChapter)}:{String(data.firstAppVerse)}
           </Button>
         </Typography>
       )}
 
 
-      <Typography variant="body2" gutterBottom>
+      <Typography variant="body1" gutterBottom>
         <strong>Significado usual:</strong>{' '}
         <span>{data.meaning}</span>
       </Typography>
@@ -638,7 +638,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
 
 
       {strongParts && strongParts.length < 2 && (
-        <Typography variant="body2" gutterBottom>
+        <Typography variant="body1" gutterBottom>
           <strong>Raíz: </strong>{isGreek && !String(data.idParent).startsWith("H") ? 'Griego — ' : 'Hebreo — '}
           {data && typeof data.idParent === 'string' && data.idParent === "" ? (
             (typeof data.parentMeaning === 'string' && data.parentMeaning === "") ? (
@@ -647,7 +647,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
               <span><i>{data.parentMeaning}</i></span>
             )
           ) : data && data.idParent ? (
-            <Button size="small" onClick={() => changeStrong(data.idParent)} style={{ textTransform: 'none' }}>
+            <Button size="small" onClick={() => changeStrong(data.idParent)} style={{ textTransform: 'none', fontSize: '0.95em' }}>
               {data.parentMeaning}
             </Button>
           ) : (
@@ -655,7 +655,7 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
           )}
           {/* Si existe idParentSec y no es cadena vacía, mostrar un segundo botón con la misma funcionalidad */}
           {data && typeof data.idParentSec === 'string' && data.idParentSec !== "" ? (
-            <Button size="small" onClick={() => changeStrong(data.idParentSec)} style={{ marginLeft: 10, textTransform: 'none' }}>
+            <Button size="small" onClick={() => changeStrong(data.idParentSec)} style={{ marginLeft: 10, textTransform: 'none', fontSize: '0.95em' }}>
               {data.parentSecMeaning}
             </Button>
           ) : null}
