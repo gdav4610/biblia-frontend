@@ -106,6 +106,12 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const [loading, setLoading] = React.useState(initialData ? false : true);
   const [error, setError] = React.useState(false);
 
+  // "Traducido en la Biblia como": mostrar solo los primeros 5 registros (y el resaltado), salvo que se pida "Ver más"
+  const [showAllTranslated, setShowAllTranslated] = React.useState(false);
+  React.useEffect(() => {
+    setShowAllTranslated(false);
+  }, [currentStrongCode]);
+
   // Nueva lógica para detalles: cuando el usuario hace click en el contador
   const [view, setView] = React.useState("stats"); // 'stats' | 'details'
   const [detailsLoading, setDetailsLoading] = React.useState(false);
@@ -722,16 +728,23 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       {view === "stats" && (
           <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 10 }}>
             <Typography variant="body1" gutterBottom>
-              <strong>Traducido en la Biblia como:</strong>
+              <strong>Traducido mayormente como:</strong>
             </Typography>
           </Box>
       )}
 
 
       {/* Vista: estadísticas (Translated) */}
-      {view === "stats" && (
+      {view === "stats" && (() => {
+        const translatedStats = Array.isArray(data.keywordStatsTranslated) ? data.keywordStatsTranslated : [];
+        // Siempre los primeros 5 registros; además, la traducción resaltada aunque esté más abajo
+        const visibleTranslated = showAllTranslated
+          ? translatedStats
+          : translatedStats.filter((ex, i) => i < 5 || isHighlighted(ex && ex.translatedWord, initialTranslated));
+        const hiddenTranslatedCount = translatedStats.length - visibleTranslated.length;
+        return (
         <ul>
-          {(Array.isArray(data.keywordStatsTranslated) ? data.keywordStatsTranslated : []).map((ex, idx) => {
+          {visibleTranslated.map((ex, idx) => {
             const isInitialTranslated = isHighlighted(ex && ex.translatedWord, initialTranslated);
             return (
             <li key={idx} style={{ marginBottom: 6 }}>
@@ -759,8 +772,26 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
             </li>
             );
           })}
+          {!showAllTranslated && hiddenTranslatedCount > 0 && (
+            <li style={{ listStyle: 'none', marginTop: 4 }}>
+              <button
+                onClick={() => setShowAllTranslated(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: '0.95em'
+                }}
+              >
+                Ver más ({hiddenTranslatedCount})
+              </button>
+            </li>
+          )}
         </ul>
-      )}
+        );
+      })()}
 
 
       {/* Vista: estadísticas (Transliterated) */}
