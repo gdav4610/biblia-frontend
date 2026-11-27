@@ -106,10 +106,14 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
   const [loading, setLoading] = React.useState(initialData ? false : true);
   const [error, setError] = React.useState(false);
 
-  // "Traducido en la Biblia como": mostrar solo los primeros 5 registros (y el resaltado), salvo que se pida "Ver más"
+  // "Traducido en la Biblia como" y "Morfemas en la Biblia": mostrar solo los primeros
+  // STATS_INITIAL_LIMIT registros (y el resaltado), salvo que se pida "Ver más"
+  const STATS_INITIAL_LIMIT = 10;
   const [showAllTranslated, setShowAllTranslated] = React.useState(false);
+  const [showAllMorphemes, setShowAllMorphemes] = React.useState(false);
   React.useEffect(() => {
     setShowAllTranslated(false);
+    setShowAllMorphemes(false);
   }, [currentStrongCode]);
 
   // Nueva lógica para detalles: cuando el usuario hace click en el contador
@@ -737,10 +741,10 @@ export default function StrongDetail({ strongCode = null, strongNumber: propStro
       {/* Vista: estadísticas (Translated) */}
       {view === "stats" && (() => {
         const translatedStats = Array.isArray(data.keywordStatsTranslated) ? data.keywordStatsTranslated : [];
-        // Siempre los primeros 5 registros; además, la traducción resaltada aunque esté más abajo
+        // Siempre los primeros registros; además, la traducción resaltada aunque esté más abajo
         const visibleTranslated = showAllTranslated
           ? translatedStats
-          : translatedStats.filter((ex, i) => i < 5 || isHighlighted(ex && ex.translatedWord, initialTranslated));
+          : translatedStats.filter((ex, i) => i < STATS_INITIAL_LIMIT || isHighlighted(ex && ex.translatedWord, initialTranslated));
         const hiddenTranslatedCount = translatedStats.length - visibleTranslated.length;
         return (
         <ul>
@@ -825,9 +829,16 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
 
 
       {/* Vista: estadísticas (Transliterated) */}
-      {view === "stats" && (
+      {view === "stats" && (() => {
+        const morphemeStats = Array.isArray(data.keywordStats) ? data.keywordStats : [];
+        // Siempre los primeros registros; además, el morfema resaltado aunque esté más abajo
+        const visibleMorphemes = showAllMorphemes
+          ? morphemeStats
+          : morphemeStats.filter((ex, i) => i < STATS_INITIAL_LIMIT || isHighlighted(ex && ex.transliteratedWord, initialMorpheme));
+        const hiddenMorphemesCount = morphemeStats.length - visibleMorphemes.length;
+        return (
         <ul>
-          {(Array.isArray(data.keywordStats) ? data.keywordStats : []).map((ex, idx) => {
+          {visibleMorphemes.map((ex, idx) => {
             const isInitialMorpheme = isHighlighted(ex && ex.transliteratedWord, initialMorpheme);
             return (
             <li key={idx} style={{ marginBottom: 6 }}>
@@ -855,8 +866,26 @@ de la Septuaginta (LXX) - solo para Strongs griegos */}
             </li>
             );
           })}
+          {!showAllMorphemes && hiddenMorphemesCount > 0 && (
+            <li style={{ listStyle: 'none', marginTop: 4 }}>
+              <button
+                onClick={() => setShowAllMorphemes(true)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: '0.95em'
+                }}
+              >
+                Ver más ({hiddenMorphemesCount})
+              </button>
+            </li>
+          )}
         </ul>
-      )}
+        );
+      })()}
 
 
       {/* Vista: estadísticas (Libros) */}
