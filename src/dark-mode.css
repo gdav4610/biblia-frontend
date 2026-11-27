@@ -2,7 +2,7 @@
 body, #root, .app-container {
   background-color: #121212;
   color: #e0e0e0;
-  font-family: 'Noto Serif', 'Literata', 'Times New Roman', serif;
+  font-family: 'Literata', 'Noto Serif', 'Times New Roman', serif;
   min-height: 100vh;
   margin: 0;
   padding: 0;

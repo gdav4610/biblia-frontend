@@ -94,7 +94,7 @@ function BibleChapterPage() {
       },
     },
     typography: {
-      fontFamily: "'Noto Serif', 'Literata', 'Times New Roman', serif",
+      fontFamily: "'Literata', 'Noto Serif', 'Times New Roman', serif",
     },
   });
 
