@@ -389,8 +389,8 @@ export default function BibleChapter({ book, chapter, highlightVerse }) {
               slotProps={{ popper: { className: KEYWORD_TOOLTIP_CLASS } }}
               title={
                 <div style={{ fontSize: "1rem", lineHeight: 1.7 }}>
-                   - Morfema: <span style={{ fontSize: "1.1em", marginTop: "0px"}}>{wordInfo.transliteratedWord} ({wordInfo.inflectionWord ? <em>{wordInfo.inflectionWord}</em> : null})</span> <br />
-                   - Lexema: <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{transliterationDisplay} ({inflectionDisplay ? <em>{inflectionDisplay}</em> : null})</span> <br />
+                   - Morfema: <span style={{ fontSize: "1.1em", marginTop: "0px"}}>{wordInfo.transliteratedWord} ({wordInfo.inflectionWord ? {wordInfo.inflectionWord} : null})</span> <br />
+                   - Lexema: <span style={{ fontSize: "1.1em", marginTop: "0px", wordBreak: 'break-word'}}>{transliterationDisplay} ({inflectionDisplay ? {inflectionDisplay} : null})</span> <br />
                    { /* show sourceMeaning, or compoundMeaning if sourceMeaning is null/empty */ }
                    - Significado usual: {(wordInfo.sourceMeaning || wordInfo.compoundMeaning) ? (wordInfo.sourceMeaning || wordInfo.compoundMeaning) : ''} <br />
                    <Button
